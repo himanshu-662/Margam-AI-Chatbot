@@ -1,0 +1,33 @@
+{
+  "phone": "919988776655",
+  "name": "Student",
+  "primary_channel": "web",
+  "created_at": "2026-11-12T01:48:55.412149",
+  "last_active": "2026-11-12T01:48:55.415510",
+  "messages": [
+    {
+      "role": "user",
+      "content": "What are the Subclass 500 Genuine Student and financial capacity requirements for Australia?",
+      "channel": "web",
+      "timestamp": "2026-11-12T01:48:55.413834"
+    },
+    {
+      "role": "assistant",
+      "content": "Hi Sneha Rao! Navigating the requirements for the Australian Subclass 500 visa requires careful preparation, especially regarding the financial capacity proof and the newer compliance standards. \n\nHere is a breakdown of the key elements required for the Australian Subclass 500 visa:\n\n### 1. Genuine Student (GS) Requirement\nThe GS requirement replaced the older GTE standard to focus squarely on your academic and career intentions:\n* **Academic Background**: Assesses your prior qualifications and academic progression.\n* **Course and Country Selection**: Evaluates your reasons for choosing your specific course and studying in Australia.\n* **Career Advancement**: Examines how the qualification will empower your career goals upon completion.\n* **Financial Stability**: Reviews your economic circumstances to ensure genuine intent to study.\n\n### 2. Financial Capacity Proof and Funds Calculation\nTo meet the Department of Home Affairs financial capacity requirement, you must demonstrate access to funds using the following formula:\n* **Living Cost Benchmark**: Mandatory living cost of AUD $29,710 per year (approx. INR 16.3 Lakhs).\n* **Tuition Fees**: Proof of your 1st year tuition fee (ranging from AUD $28,000 to $52,000 depending on the university tier).\n* **Travel Expenses**: Return airfare estimated at AUD $2,000.\n* **Accepted Fund Types**: Liquid savings accounts, fixed deposits held for a minimum of 3 months, or recognized bank education loans.\n\n### 3. Margam Advisory Services & Support\n* **Profile & Documents**: Assistance with building ATS-ready resumes, crafting university-specific SOPs, and organizing financial proof.\n* **Financial Sponsor Guidance**: Ensuring sponsor relationships (self, parents, siblings) are clearly documented with formal income tax returns (ITR) from the last 2-3 financial years.\n* **End-to-End Visa Support**: Complete guidance through visa filing, biometrics, Overseas Student Health Cover (OSHC), and pre-departure preparation.\n\nAt Margam, we help you write your story with heart, not templates. For personalized assistance structuring your financial documents or drafting your GS statement, feel free to reach out. Want help? Call us at +91 7981804359 or book a free call: https://calendly.com/yourmargam",
+      "channel": "web",
+      "timestamp": "2026-11-12T01:48:55.415510"
+    }
+  ],
+  "user_profile": {
+    "target_country": "USA",
+    "field_of_study": "Computer Science",
+    "concerns": [
+      "visa"
+    ]
+  },
+  "lead_score": 25,
+  "lead_category": "COLD",
+  "has_booked": false,
+  "nudge_scheduled_at": "2026-11-13T01:48:55.415510",
+  "nudge_sent": false
+}

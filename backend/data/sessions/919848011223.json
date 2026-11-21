@@ -1,0 +1,32 @@
+{
+  "phone": "919848011223",
+  "name": "Student",
+  "primary_channel": "web",
+  "created_at": "2026-11-12T01:37:15.876879",
+  "last_active": "2026-11-12T01:37:15.880311",
+  "messages": [
+    {
+      "role": "user",
+      "content": "How long is the STEM OPT work authorization for US graduate students?",
+      "channel": "web",
+      "timestamp": "2026-11-12T01:37:15.878536"
+    },
+    {
+      "role": "assistant",
+      "content": "Vikram, for F-1 visa graduates in the US, post-study work rights offer significant runway through standard and extended practical training periods. \n\nBased on the official guidance, here is the breakdown of your work authorization timeline and options:\n\n- **Optional Practical Training (OPT):** 12 months available for all F-1 degree graduates upon completion of their program.\n- **STEM OPT Extension:** 24 additional months for designated Science, Technology, Engineering, and Math programs.\n- **Total Work Authorization:** Up to 36 months (3 full years) on your F-1 visa, giving you multiple attempts at the H-1B lottery without immediate sponsorship pressure.\n- **Curricular Practical Training (CPT):** Available during your course for accredited internships.\n\nTo secure the 24-month extension, Vikram, you must ensure your employer is enrolled in E-Verify and submit your Form I-765 along with a properly completed Form I-983 Training Plan up to 90 days before your initial OPT expires. \n\nAt Margam, we help you navigate these post-graduation steps seamlessly. Want help planning your timeline or understanding employer requirements? Reach out at +91 7981804359 or book a free call: https://calendly.com/yourmargam",
+      "channel": "web",
+      "timestamp": "2026-11-12T01:37:15.880311"
+    }
+  ],
+  "user_profile": {
+    "target_country": "USA",
+    "concerns": [
+      "visa"
+    ]
+  },
+  "lead_score": 15,
+  "lead_category": "COLD",
+  "has_booked": false,
+  "nudge_scheduled_at": "2026-11-13T01:37:15.880311",
+  "nudge_sent": false
+}

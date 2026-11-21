@@ -1,0 +1,8 @@
+{
+  "name": "Margam AI",
+  "description": "A high-end multimodal RAG and Agentic system built with LangGraph and Gemini, guiding students through their data path (PDF, PPT, Images).",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

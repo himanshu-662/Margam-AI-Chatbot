@@ -1,0 +1,67 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# ChromaDB data (will be created at runtime)
+chroma_db/
+*.db
+*.sqlite
+*.sqlite3
+
+# Data files (PDFs - too large for Docker image)
+Data/
+*.pdf
+
+# Leads CSV (runtime data)
+leads.csv
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+README.md
+
+# Fly.io
+.fly/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+.cache/

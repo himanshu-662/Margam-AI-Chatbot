@@ -1,0 +1,16 @@
+[
+  {
+    "booking_id": "MRG-2611-6B93",
+    "timestamp": "2026-11-12T01:15:08.174240",
+    "name": "Siddharth Varma",
+    "phone": "9848022338",
+    "target_country": "Germany",
+    "degree": "Master's in CS",
+    "intake": "Fall 2026",
+    "preferred_time": "Tomorrow Evening (6 PM - 8 PM)",
+    "preferred_mode": "whatsapp",
+    "lead_score": 85,
+    "lead_category": "HOT",
+    "dossier_path": "D:\\PROJECTS\\margam-chatbot-main\\backend\\data\\leads\\MRG-2611-6B93_9848022338.md"
+  }
+]
