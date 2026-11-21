@@ -30,9 +30,6 @@ def setup_logging(log_level: str = "INFO", log_dir: str = "logs"):
         log_level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
         log_dir: Directory to store log files
     """
-    # Create logs directory if it doesn't exist
-    os.makedirs(log_dir, exist_ok=True)
-    
     # Get root logger
     logger = logging.getLogger()
     logger.setLevel(getattr(logging, log_level.upper(), logging.INFO))
@@ -40,7 +37,7 @@ def setup_logging(log_level: str = "INFO", log_dir: str = "logs"):
     # Remove existing handlers
     logger.handlers.clear()
     
-    # Console handler with formatted output
+    # Console handler with formatted output (always works, including Vercel/serverless)
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(getattr(logging, log_level.upper(), logging.INFO))
     console_formatter = ContextFormatter(
@@ -48,35 +45,37 @@ def setup_logging(log_level: str = "INFO", log_dir: str = "logs"):
         datefmt='%Y-%m-%d %H:%M:%S'
     )
     console_handler.setFormatter(console_formatter)
-    
-    # File handler with rotation (10MB per file, keep 5 backups)
-    file_handler = RotatingFileHandler(
-        os.path.join(log_dir, 'margam_ai.log'),
-        maxBytes=10 * 1024 * 1024,  # 10MB
-        backupCount=5,
-        encoding='utf-8'
-    )
-    file_handler.setLevel(logging.DEBUG)  # Log everything to file
-    file_formatter = ContextFormatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
-    file_handler.setFormatter(file_formatter)
-    
-    # Error file handler (errors only)
-    error_handler = RotatingFileHandler(
-        os.path.join(log_dir, 'margam_ai_errors.log'),
-        maxBytes=10 * 1024 * 1024,  # 10MB
-        backupCount=5,
-        encoding='utf-8'
-    )
-    error_handler.setLevel(logging.ERROR)
-    error_handler.setFormatter(file_formatter)
-    
-    # Add handlers to logger
     logger.addHandler(console_handler)
-    logger.addHandler(file_handler)
-    logger.addHandler(error_handler)
+    
+    # File handlers: only if directory is writable (local/persistent environment)
+    try:
+        os.makedirs(log_dir, exist_ok=True)
+        file_handler = RotatingFileHandler(
+            os.path.join(log_dir, 'margam_ai.log'),
+            maxBytes=10 * 1024 * 1024,  # 10MB
+            backupCount=5,
+            encoding='utf-8'
+        )
+        file_handler.setLevel(logging.DEBUG)
+        file_formatter = ContextFormatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S'
+        )
+        file_handler.setFormatter(file_formatter)
+        logger.addHandler(file_handler)
+        
+        error_handler = RotatingFileHandler(
+            os.path.join(log_dir, 'margam_ai_errors.log'),
+            maxBytes=10 * 1024 * 1024,  # 10MB
+            backupCount=5,
+            encoding='utf-8'
+        )
+        error_handler.setLevel(logging.ERROR)
+        error_handler.setFormatter(file_formatter)
+        logger.addHandler(error_handler)
+    except Exception:
+        # In read-only serverless filesystems (e.g. AWS Lambda, Vercel), skip file handlers
+        pass
     
     return logger
 

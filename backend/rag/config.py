@@ -82,8 +82,22 @@ MARGAM_STATS = {
     "rating": os.getenv("MARGAM_RATING", "5/5")
 }
 
+import tempfile
+import shutil
+
 # --- Database Configuration ---
-DB_DIR = os.path.join(os.path.dirname(__file__), "..", "chroma_db")
+IS_SERVERLESS = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
+_ORIG_DB_DIR = os.path.join(os.path.dirname(__file__), "..", "chroma_db")
+
+if IS_SERVERLESS:
+    DB_DIR = os.path.join(tempfile.gettempdir(), "chroma_db")
+    if os.path.exists(_ORIG_DB_DIR) and not os.path.exists(DB_DIR):
+        try:
+            shutil.copytree(_ORIG_DB_DIR, DB_DIR)
+        except Exception:
+            DB_DIR = _ORIG_DB_DIR
+else:
+    DB_DIR = _ORIG_DB_DIR
 
 # --- Response Configuration ---
 MAX_RESPONSE_WORDS_SIMPLE = int(os.getenv("MAX_RESPONSE_WORDS_SIMPLE", "100"))

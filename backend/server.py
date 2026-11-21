@@ -130,7 +130,13 @@ class BookingRequest(BaseModel):
 async def log_lead_async(name: str, phone: str, question: str):
     """Async logging of leads to CSV file - non-blocking"""
     try:
-        leads_file = os.getenv("LEADS_FILE", "leads.csv")
+        leads_file = os.getenv("LEADS_FILE")
+        if not leads_file:
+            import tempfile
+            if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+                leads_file = os.path.join(tempfile.gettempdir(), "leads.csv")
+            else:
+                leads_file = "leads.csv"
         file_exists = os.path.exists(leads_file)
         
         # Sanitize inputs for CSV

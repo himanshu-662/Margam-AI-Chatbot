@@ -26,8 +26,18 @@ WHATSAPP_API_TOKEN = os.getenv("WHATSAPP_API_TOKEN", "")
 WHATSAPP_PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID", "")
 WHATSAPP_COUNSELOR_PHONE = os.getenv("WHATSAPP_COUNSELOR_PHONE", "+919347997790").replace(" ", "")
 
-OUTBOUND_LOG = os.path.join(os.path.dirname(__file__), "data", "outbound_whatsapp.jsonl")
-os.makedirs(os.path.dirname(OUTBOUND_LOG), exist_ok=True)
+import tempfile
+
+IS_SERVERLESS = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
+if IS_SERVERLESS:
+    OUTBOUND_LOG = os.path.join(tempfile.gettempdir(), "outbound_whatsapp.jsonl")
+else:
+    OUTBOUND_LOG = os.path.join(os.path.dirname(__file__), "data", "outbound_whatsapp.jsonl")
+
+try:
+    os.makedirs(os.path.dirname(OUTBOUND_LOG), exist_ok=True)
+except Exception:
+    pass
 
 def verify_webhook(mode: str, token: str, challenge: str) -> Optional[int]:
     """Verify webhook token for Meta WhatsApp Cloud API handshake."""

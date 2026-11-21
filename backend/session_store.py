@@ -10,10 +10,20 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 import logging
 
+import tempfile
+
 logger = logging.getLogger(__name__)
 
-SESSIONS_DIR = os.path.join(os.path.dirname(__file__), "data", "sessions")
-os.makedirs(SESSIONS_DIR, exist_ok=True)
+IS_SERVERLESS = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
+if IS_SERVERLESS:
+    SESSIONS_DIR = os.path.join(tempfile.gettempdir(), "margam_sessions")
+else:
+    SESSIONS_DIR = os.path.join(os.path.dirname(__file__), "data", "sessions")
+
+try:
+    os.makedirs(SESSIONS_DIR, exist_ok=True)
+except Exception:
+    pass
 
 def normalize_phone(phone: str) -> str:
     """Normalize phone number to digits only (e.g. +91 98480-22338 -> 919848022338)."""

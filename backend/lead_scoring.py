@@ -10,12 +10,22 @@ from datetime import datetime
 from typing import Dict, Any, List, Optional
 import logging
 
+import tempfile
+
 logger = logging.getLogger(__name__)
 
-LEADS_DIR = os.path.join(os.path.dirname(__file__), "data", "leads")
-LEADS_JSON = os.path.join(os.path.dirname(__file__), "data", "leads.json")
+IS_SERVERLESS = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
+if IS_SERVERLESS:
+    LEADS_DIR = os.path.join(tempfile.gettempdir(), "margam_leads")
+    LEADS_JSON = os.path.join(tempfile.gettempdir(), "leads.json")
+else:
+    LEADS_DIR = os.path.join(os.path.dirname(__file__), "data", "leads")
+    LEADS_JSON = os.path.join(os.path.dirname(__file__), "data", "leads.json")
 
-os.makedirs(LEADS_DIR, exist_ok=True)
+try:
+    os.makedirs(LEADS_DIR, exist_ok=True)
+except Exception:
+    pass
 
 def calculate_lead_score(
     user_profile: Dict[str, Any],
