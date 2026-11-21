@@ -56,6 +56,8 @@ backend/outbound_whatsapp.jsonl
 *.png
 *.jpg
 *.jpeg
+!frontend/public/**
+!frontend/src/assets/**
 
 # Editor & OS files
 .vscode/*
