@@ -417,7 +417,7 @@ const App: React.FC = () => {
         clearInterval(streamingIntervalRef.current);
       }
 
-      // Smooth 200ms typewriter reveal loop
+      // Smooth 250ms typewriter reveal loop
       streamingIntervalRef.current = setInterval(() => {
         if (displayedText.length < targetText.length) {
           const lag = targetText.length - displayedText.length;
@@ -452,7 +452,7 @@ const App: React.FC = () => {
           setIsTyping(false);
           setStatusMessage('');
         }
-      }, 200);
+      }, 250);
 
       while (true) {
         const { value, done } = await reader.read();
@@ -552,7 +552,7 @@ const App: React.FC = () => {
             setIsTyping(false);
             setStatusMessage('');
           }
-        }, 200);
+        }, 250);
 
         if (data.user_profile) {
           setStudentProfile(prev => ({ ...prev, ...data.user_profile }));
