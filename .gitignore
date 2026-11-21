@@ -45,7 +45,7 @@ backend/.env
 frontend/.env
 
 # Local Storage & Runtime Data
-backend/chroma_db/
+# backend/chroma_db/ tracked for Vercel deployment
 backend/sessions/
 backend/leads/
 backend/leads.csv

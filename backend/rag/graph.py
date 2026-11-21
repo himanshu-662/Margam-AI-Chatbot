@@ -11,17 +11,22 @@ from .nodes import (
 # --- Configuration ---
 from .config import (
     DB_DIR, EMBEDDING_MODEL, RETRIEVAL_K, RETRIEVAL_FETCH_K, RETRIEVAL_LAMBDA_MULT,
-    USE_RERANKING, RERANK_TOP_K, RERANK_MODEL, RERANK_PROVIDER, FLASHRANK_MODEL
+    USE_RERANKING, RERANK_TOP_K, RERANK_MODEL, RERANK_PROVIDER, FLASHRANK_MODEL,
+    GEMINI_API_KEY
 )
 
 # --- Retriever Logic ---
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_chroma import Chroma
 
 logger = logging.getLogger(__name__)
 
-logger.info("Initializing vector store...")
-embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
+logger.info("Initializing vector store with Gemini Embeddings...")
+google_key = GEMINI_API_KEY or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+embeddings = GoogleGenerativeAIEmbeddings(
+    model=EMBEDDING_MODEL,
+    google_api_key=google_key
+)
 if os.path.exists(DB_DIR):
     vectorstore = Chroma(persist_directory=DB_DIR, embedding_function=embeddings)
     # Enhanced MMR Retriever: Better relevance with more coverage

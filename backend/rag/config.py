@@ -22,7 +22,7 @@ LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.4"))
 
 
 
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "all-mpnet-base-v2")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "models/gemini-embedding-001")
 
 # --- Retrieval Configuration ---
 RETRIEVAL_K = int(os.getenv("RETRIEVAL_K", "12"))  

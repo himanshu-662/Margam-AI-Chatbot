@@ -1,12 +1,13 @@
 import os
 import shutil
+import time
 from langchain_community.document_loaders import PyPDFDirectoryLoader, DirectoryLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_chroma import Chroma
 
 # Configuration
-from rag.config import EMBEDDING_MODEL, DB_DIR, CHUNK_SIZE, CHUNK_OVERLAP
+from rag.config import EMBEDDING_MODEL, DB_DIR, CHUNK_SIZE, CHUNK_OVERLAP, GEMINI_API_KEY
 
 DOCS_DIR = os.path.join(os.path.dirname(__file__), "..", "Data")
 
@@ -57,20 +58,50 @@ def ingest():
 
     # 3. Embed & Store
     print("Initializing embeddings and ChromaDB...")
-    embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
-    
-    # Check if DB exists and clear it for clean re-ingestion (optional, but good for dev)
-    if os.path.exists(DB_DIR):
-        print("Removing existing database for clean ingestion...")
-        shutil.rmtree(DB_DIR)
-
-    vectorstore = Chroma.from_documents(
-        documents=chunks,
-        embedding=embeddings,
-        persist_directory=DB_DIR
+    google_key = GEMINI_API_KEY or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    embeddings = GoogleGenerativeAIEmbeddings(
+        model=EMBEDDING_MODEL,
+        google_api_key=google_key
     )
     
-    print(f"Ingestion complete! Stored in {DB_DIR}")
+    # Connect to vectorstore (resuming if already partially populated)
+    vectorstore = Chroma(persist_directory=DB_DIR, embedding_function=embeddings)
+    try:
+        current_count = vectorstore._collection.count()
+    except Exception:
+        current_count = 0
+
+    print(f"Current documents in ChromaDB: {current_count}/{len(chunks)}")
+    batch_size = 10
+    total_batches = (len(chunks) + batch_size - 1) // batch_size
+    i = current_count
+    while i < len(chunks):
+        batch = chunks[i:i + batch_size]
+        batch_num = (i // batch_size) + 1
+        print(f"Embedding batch {batch_num}/{total_batches} ({len(batch)} chunks)...")
+        max_retries = 8
+        success = False
+        for attempt in range(max_retries):
+            try:
+                vectorstore.add_documents(batch)
+                success = True
+                break
+            except Exception as e:
+                err_str = str(e)
+                if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "quota" in err_str.lower():
+                    wait_time = 45
+                    print(f"Rate limit reached on batch {batch_num}. Pausing for {wait_time}s before retry (attempt {attempt + 1}/{max_retries})...")
+                    time.sleep(wait_time)
+                else:
+                    print(f"Error on batch {batch_num}: {e}. Retrying in 15s...")
+                    time.sleep(15)
+        if not success:
+            print(f"Failed to ingest batch {batch_num} after {max_retries} attempts.")
+            return
+        i += len(batch)
+        time.sleep(3)  # Pacing between batches to respect RPM / TPM
+
+    print(f"Ingestion complete! Successfully stored {len(chunks)} chunks in {DB_DIR}")
 
 if __name__ == "__main__":
     ingest()
