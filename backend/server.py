@@ -426,17 +426,13 @@ VERIFIED KNOWLEDGE CONTEXT:
                     "question": request.question
                 }
                 
-                # Live token streaming with smooth pacing
+                # Live token streaming
                 accumulated_text = ""
                 async for chunk in chain.astream(stream_inputs):
                     token_text = chunk if isinstance(chunk, str) else str(chunk)
                     if token_text:
                         accumulated_text += token_text
-                        parts = re.split(r'(\s+)', token_text)
-                        for part in parts:
-                            if part:
-                                yield f"event: token\ndata: {json.dumps({'token': part})}\n\n"
-                                await asyncio.sleep(0.018)
+                        yield f"event: token\ndata: {json.dumps({'token': token_text})}\n\n"
                 
                 # Follow-up inquiry chips
                 follow_ups = get_follow_up_questions(request.question, "", "", request.chat_history)

@@ -557,18 +557,19 @@ const App: React.FC = () => {
         if (data.user_profile) {
           setStudentProfile(prev => ({ ...prev, ...data.user_profile }));
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Chat error:', err);
         if (streamingIntervalRef.current) {
           clearInterval(streamingIntervalRef.current);
           streamingIntervalRef.current = null;
         }
+        const errorDetail = err?.message ? ` (${err.message})` : '';
         setMessages(prev =>
           prev.map(m =>
             m.id === botMsgId
               ? {
                   ...m,
-                  content: 'Sorry, I encountered an issue connecting to the Margam knowledge base. Please try asking again in a moment.',
+                  content: `Sorry, I encountered an issue connecting to the Margam knowledge base${errorDetail}. Please check your connection or environment settings.`,
                   isStreaming: false
                 }
               : m
