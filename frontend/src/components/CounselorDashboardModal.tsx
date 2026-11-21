@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -52,8 +53,8 @@ export const CounselorDashboardModal: React.FC<CounselorDashboardModalProps> = (
     setLoading(true);
     try {
       const [leadsRes, metricsRes] = await Promise.all([
-        fetch('http://localhost:8000/leads'),
-        fetch('http://localhost:8000/analytics/metrics')
+        fetch(`${API_BASE_URL}/leads`),
+        fetch(`${API_BASE_URL}/analytics/metrics`)
       ]);
 
       if (leadsRes.ok) {
@@ -81,7 +82,7 @@ export const CounselorDashboardModal: React.FC<CounselorDashboardModalProps> = (
     setSelectedLead(lead);
     setLoadingDossier(true);
     try {
-      const res = await fetch(`http://localhost:8000/leads/${lead.booking_id}/dossier`);
+      const res = await fetch(`${API_BASE_URL}/leads/${lead.booking_id}/dossier`);
       if (res.ok) {
         const data = await res.json();
         setDossierMarkdown(data.dossier_markdown || '');

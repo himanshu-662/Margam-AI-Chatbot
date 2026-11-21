@@ -9,6 +9,7 @@ import { DocumentReviewModal } from './components/DocumentReviewModal';
 import { ChatSidebar } from './components/ChatSidebar';
 import { ConsultationModal } from './components/ConsultationModal';
 import { CounselorDashboardModal } from './components/CounselorDashboardModal';
+import { API_BASE_URL } from './config';
 
 interface UserConfig {
   name: string;
@@ -361,7 +362,7 @@ const App: React.FC = () => {
     setIsTyping(true);
     setStatusMessage('Analyzing question & checking verified knowledge base...');
 
-    const API_URL = 'http://localhost:8000';
+    const API_URL = API_BASE_URL;
     const history = messages.slice(-6).map(m => ({
       role: m.role,
       content: m.content
@@ -588,7 +589,7 @@ const App: React.FC = () => {
     if (!userConfig || messages.length === 0) return;
     setIsExporting(true);
     try {
-      const res = await fetch('http://localhost:8000/export-roadmap', {
+      const res = await fetch(`${API_BASE_URL}/export-roadmap`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

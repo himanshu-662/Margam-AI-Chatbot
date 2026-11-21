@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { API_BASE_URL } from '../config';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { StudentProfile } from '../types';
@@ -38,7 +39,7 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({
     e.preventDefault();
     setIsSubmitting(true);
 
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    const API_URL = API_BASE_URL;
     try {
       const historyFormatted = chatHistory.slice(-10).map(m => ({
         role: m.role,

@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { API_BASE_URL } from '../config';
 import { DocumentAnalysisResult } from '../types';
 
 interface DocumentReviewModalProps {
@@ -42,7 +43,7 @@ export const DocumentReviewModal: React.FC<DocumentReviewModalProps> = ({
     setIsAnalyzing(true);
     setErrorMsg('');
     try {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const API_URL = API_BASE_URL;
       const formData = new FormData();
       formData.append('file', file);
       formData.append('doc_type', docType);

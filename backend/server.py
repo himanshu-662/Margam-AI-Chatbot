@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form, APIRouter
 from fastapi.responses import StreamingResponse, JSONResponse, PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
@@ -90,6 +90,9 @@ app.add_middleware(RateLimitMiddleware,
 # Add request logging middleware
 app.add_middleware(RequestLoggingMiddleware)
 
+# Initialize API router to mount on both root and /api prefixes
+router = APIRouter()
+
 class ChatRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=5000, description="User's question")
     user_name: str = Field(..., min_length=1, max_length=200, description="User's name")
@@ -142,7 +145,7 @@ async def log_lead_async(name: str, phone: str, question: str):
     except Exception as e:
         logger.error(f"Failed to log lead: {e}", exc_info=True)
 
-@app.get("/")
+@router.get("/")
 async def read_root():
     """Root endpoint - basic service status"""
     return {
@@ -151,7 +154,7 @@ async def read_root():
         "version": "1.0.0"
     }
 
-@app.get("/health")
+@router.get("/health")
 async def health_check():
     """Health check endpoint for load balancers and monitoring"""
     try:
@@ -235,7 +238,7 @@ def process_rag_result(result: dict) -> dict:
         "cta_type": cta_type
     }
 
-@app.post("/chat")
+@router.post("/chat")
 async def chat(request: ChatRequest):
     """
     Handle standard chat requests returning response, citations, suggestions & profile.
@@ -301,7 +304,7 @@ async def chat(request: ChatRequest):
         logger.error(f"Error processing chat request: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="An error occurred while processing your request.")
 
-@app.post("/chat/stream")
+@router.post("/chat/stream")
 async def chat_stream(request: ChatRequest):
     """
     True real-time Server-Sent Events (SSE) streaming endpoint with live token emission.
@@ -497,7 +500,7 @@ Answer {user_name}'s message in a clear, comprehensive, and engaging manner.
             
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
-@app.post("/analyze-document")
+@router.post("/analyze-document")
 async def analyze_document(
     file: UploadFile = File(...),
     doc_type: str = Form("sop"), # "sop", "resume", "transcript", "general"
@@ -587,7 +590,7 @@ class RoadmapRequest(BaseModel):
     user_profile: dict
     chat_history: list[dict]
 
-@app.post("/export-roadmap")
+@router.post("/export-roadmap")
 async def export_roadmap(request: RoadmapRequest):
     """
     Synthesize the student's consultation into a formal, downloadable Study Abroad Action Plan.
@@ -623,7 +626,7 @@ Ensure high readability with clean tables and checklists."""),
         logger.error(f"Roadmap export failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to generate roadmap.")
 
-@app.post("/book-consultation")
+@router.post("/book-consultation")
 async def book_consultation(request: BookingRequest):
     """
     Process consultation booking, compute lead score, generate counselor dossier,
@@ -691,7 +694,7 @@ async def book_consultation(request: BookingRequest):
         logger.error(f"Error booking consultation: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to process consultation booking.")
 
-@app.get("/leads")
+@router.get("/leads")
 async def get_leads():
     """
     Return all recorded consultation leads and qualification statuses for counselor review.
@@ -708,7 +711,7 @@ async def get_leads():
         logger.error(f"Error reading leads: {e}")
         return {"leads": []}
 
-@app.get("/leads/{booking_id}/dossier")
+@router.get("/leads/{booking_id}/dossier")
 async def get_lead_dossier(booking_id: str):
     """
     Fetch the generated markdown handover dossier for a specific booked consultation.
@@ -735,7 +738,7 @@ async def get_lead_dossier(booking_id: str):
         logger.error(f"Error reading dossier: {e}")
         raise HTTPException(status_code=500, detail="Failed to read counselor dossier.")
 
-@app.get("/analytics/metrics")
+@router.get("/analytics/metrics")
 async def get_analytics_metrics():
     """
     Calculate and return key PRD conversion and engagement metrics:
@@ -808,7 +811,7 @@ async def get_analytics_metrics():
 # Phase 3: Meta WhatsApp Cloud API Gateway Endpoints
 # ---------------------------------------------------------
 
-@app.get("/webhook/whatsapp")
+@router.get("/webhook/whatsapp")
 async def verify_whatsapp_webhook(request: Request):
     """
     Meta WhatsApp Cloud API Webhook Verification Challenge Handshake.
@@ -825,7 +828,7 @@ async def verify_whatsapp_webhook(request: Request):
     logger.warning("WhatsApp webhook verification failed: token mismatch.")
     raise HTTPException(status_code=403, detail="Verification token mismatch.")
 
-@app.post("/webhook/whatsapp")
+@router.post("/webhook/whatsapp")
 async def handle_whatsapp_webhook(request: Request):
     """
     Process incoming WhatsApp messages with omnichannel session continuity.
@@ -843,7 +846,7 @@ async def handle_whatsapp_webhook(request: Request):
 # Phase 3: Automated 24h Re-engagement Nudge Endpoints
 # ---------------------------------------------------------
 
-@app.get("/nudges/pending")
+@router.get("/nudges/pending")
 async def get_pending_nudges_endpoint(min_hours: float = 20.0):
     """
     Identify student sessions eligible for a proactive re-engagement nudge.
@@ -859,13 +862,17 @@ async def get_pending_nudges_endpoint(min_hours: float = 20.0):
         "pending_nudges": sanitized
     }
 
-@app.post("/nudges/trigger")
+@router.post("/nudges/trigger")
 async def trigger_nudges_endpoint(force_all: bool = False, min_hours: float = 20.0):
     """
     Trigger and dispatch re-engagement nudges for all eligible student sessions.
     """
     result = await trigger_reengagement_nudges(force_all=force_all, min_hours=min_hours)
     return result
+
+# Mount router on both root and /api prefixes for Vercel multi-service routing compatibility
+app.include_router(router)
+app.include_router(router, prefix="/api")
 
 if __name__ == "__main__":
     import uvicorn
