@@ -20,38 +20,38 @@ The system features real-time Server-Sent Events (SSE) token streaming with a 20
 
 ```mermaid
 flowchart TD
-    subgraph Clients["User Channels"]
-        Web["Web Application (React 19 + Inter + Dark UI)"]
-        WhatsApp["Meta WhatsApp Cloud API (Webhook)"]
+    subgraph Clients [User Channels]
+        Web[Web Client - React 19]
+        WhatsApp[WhatsApp Cloud API]
     end
 
-    subgraph Gateway["FastAPI API Gateway"]
-        Auth["CORS & Request Context Middleware"]
-        RateLimit["Sliding Window Rate Limiter"]
-        Logger["Structured JSON Logger & Tracing"]
+    subgraph Gateway [API Gateway]
+        Auth[CORS and Request Context]
+        RateLimit[Rate Limiter]
+        Logger[Structured Logger and Tracing]
     end
 
-    subgraph Orchestrator["LangGraph Multi-Agent RAG Engine"]
-        Router{"Intent Router"}
-        ChromaStore[("ChromaDB Vector Store\n(all-mpnet-base-v2)")]
-        Reranker["FlashRank Neural Cross-Encoder"]
-        WebGrounding["Tavily / Web Grounding"]
-        GeminiLLM["Google Gemini 2.5 Flash / Lite"]
-        StreamBuffer["Smooth 200ms Typewriter Queue"]
+    subgraph Orchestrator [LangGraph RAG Engine]
+        Router{Intent Router}
+        ChromaStore[(ChromaDB Vector Store)]
+        Reranker[FlashRank Neural Reranker]
+        WebGrounding[Tavily Web Grounding]
+        GeminiLLM[Google Gemini 2.5 Flash]
+        StreamBuffer[200ms Typewriter Queue]
     end
 
-    subgraph BusinessLogic["Business & Counselor Intelligence"]
-        LeadScorer["Real-Time Lead Scorer (Hot/Warm/Cold)"]
-        DossierGen["Counselor Briefing Dossier Generator"]
-        NudgeEngine["Omnichannel Re-Engagement Daemon"]
-        DocReview["AI Document Review (SOP/CV/Transcripts)"]
-        CostCalc["Living Cost & Blocked Account Engine"]
+    subgraph BusinessLogic [Counselor and Business Intelligence]
+        LeadScorer[Real-Time Lead Scorer]
+        DossierGen[Counselor Briefing Dossier]
+        NudgeEngine[Re-Engagement Daemon]
+        DocReview[AI Document Review]
+        CostCalc[Cost and Blocked Account Engine]
     end
 
-    subgraph Storage["Persistent Data Layer"]
-        ChromaSQLite[("chroma_db (Embeddings)")]
-        SessionDB[("sessions/ (JSON Session Store)")]
-        LeadsDB[("leads/ & leads.csv (CRM Export)")]
+    subgraph Storage [Persistent Data Layer]
+        ChromaSQLite[(ChromaDB SQLite)]
+        SessionDB[(Session Store)]
+        LeadsDB[(Leads CRM Store)]
     end
 
     Web --> Auth
@@ -83,9 +83,9 @@ flowchart TD
 ## Core Capabilities
 
 ### 1. Multi-Stage RAG & Grounded Intelligence
-- **High-Density Vector Ingestion**: Ingests official visa policies, university prospectuses, and blocked account regulations from PDF documents using Recursive Character Chunking ($1000$ chars, $200$ overlap).
+- **High-Density Vector Ingestion**: Ingests official visa policies, university prospectuses, and blocked account regulations from PDF documents using Recursive Character Chunking (1,000 chars, 200 overlap).
 - **Dense Semantic Retrieval**: Employs `sentence-transformers/all-mpnet-base-v2` dense embeddings inside **ChromaDB** with Maximal Marginal Relevance (MMR) to guarantee topical diversity.
-- **Neural Cross-Encoder Reranking**: Leverages **FlashRank** (`ms-marco-MiniLM-L-12-v2`) to rerank top-$K$ candidates, filtering low-confidence context before prompting the LLM.
+- **Neural Cross-Encoder Reranking**: Leverages **FlashRank** (`ms-marco-MiniLM-L-12-v2`) to rerank top-K candidates, filtering low-confidence context before prompting the LLM.
 - **Zero-Hallucination Citations**: Extracts exact document sources, pages, and snippet references so students receive verifiable advice with clickable citation inspection.
 - **Live Web Grounding**: Integrated with Tavily search for real-time validation of fluctuating exchange rates and latest embassy announcements.
 
@@ -97,7 +97,7 @@ flowchart TD
 ### 3. Omnichannel Engagement & WhatsApp Gateway
 - **Dual-Channel Parity**: Full feature parity across both Web Chat and Meta WhatsApp Business Cloud API.
 - **Webhook Handlers**: Secure challenge verification (`GET /webhook/whatsapp`) and webhook event processing (`POST /webhook/whatsapp`).
-- **Autonomous Re-Engagement Nudge Engine**: Identifies dormant conversations ($>20$ hours) and triggers contextual WhatsApp follow-ups with personalized advisory tips.
+- **Autonomous Re-Engagement Nudge Engine**: Identifies dormant conversations (> 20 hours) and triggers contextual WhatsApp follow-ups with personalized advisory tips.
 
 ### 4. Counselor Intelligence & Lead Scoring
 - **Automated Lead Categorization**: Automatically categorizes inquiries as **HOT**, **WARM**, or **COLD** based on target intake, budget clarity, academic readiness, and question urgency.
@@ -195,8 +195,8 @@ Before deploying or running locally, verify your host has:
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-org/margam-chatbot.git
-cd margam-chatbot
+git clone https://github.com/himanshu-662/Margam-AI-Chatbot.git
+cd Margam-AI-Chatbot
 ```
 
 ### 2. Backend Setup
@@ -294,10 +294,10 @@ Real-time Server-Sent Events (SSE) streaming endpoint emitting token-by-token ad
   }
   ```
 - **SSE Events Emitted**:
-  - `event: status` $\rightarrow$ `{"status": "analyzing", "message": "Analyzing question..."}`
-  - `event: token` $\rightarrow$ `{"token": "The "}`
-  - `event: metadata` $\rightarrow$ `{"citations": [...], "suggestions": [...], "user_profile": {...}}`
-  - `event: done` $\rightarrow$ `{"status": "completed"}`
+  - `event: status` -> `{"status": "analyzing", "message": "Analyzing question..."}`
+  - `event: token` -> `{"token": "The "}`
+  - `event: metadata` -> `{"citations": [...], "suggestions": [...], "user_profile": {...}}`
+  - `event: done` -> `{"status": "completed"}`
 
 #### `POST /chat`
 Synchronous fallback endpoint returning the complete JSON response payload.
@@ -449,4 +449,4 @@ curl http://localhost:8000/health
 
 This software is proprietary and confidential. Unauthorized copying, distribution, modification, or deployment of this code, via any medium, is strictly prohibited without explicit written consent from Margam Study Abroad Advisory.
 
-Copyright &copy; 2026 Margam AI. All rights reserved.
+Copyright (c) 2026 Margam AI. All rights reserved.
