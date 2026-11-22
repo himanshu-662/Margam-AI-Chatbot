@@ -1165,22 +1165,6 @@ const App: React.FC = () => {
                           <span className="hidden sm:inline text-xs font-medium">{isUploadingDoc ? 'Uploading...' : 'Attach'}</span>
                         </button>
 
-                        {/* Voice Input Button */}
-                        <button
-                          onClick={toggleSpeechRecognition}
-                          className={`p-1.5 sm:p-2 rounded-xl text-xs transition-colors flex items-center gap-1 cursor-pointer ${
-                            isListening
-                              ? 'text-red-400 bg-red-950/50 animate-pulse'
-                              : 'text-slate-400 hover:text-white hover:bg-slate-800'
-                          }`}
-                          title="Voice input"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                          </svg>
-                          <span className="hidden sm:inline text-[11px] font-medium">{isListening ? 'Listening...' : 'Voice'}</span>
-                        </button>
-
                         {/* Live Web Search */}
                         <button
                           onClick={() => setIncludeLatestInfo(!includeLatestInfo)}
@@ -1198,15 +1182,33 @@ const App: React.FC = () => {
                         </button>
                       </div>
 
-                      {/* Ask Mentor Button */}
-                      <button
-                        onClick={() => handleSend()}
-                        disabled={(!input.trim() && !attachedDoc) || isTyping}
-                        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-4 sm:px-5 py-2 rounded-xl font-semibold text-xs sm:text-sm transition-all disabled:opacity-40 shadow-sm hover:shadow-blue-500/25 flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <span>Ask Mentor</span>
-                        <span>→</span>
-                      </button>
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        {/* Voice Input Button (Mic Aligned to Right) */}
+                        <button
+                          onClick={toggleSpeechRecognition}
+                          className={`p-1.5 sm:p-2 rounded-xl text-xs transition-colors flex items-center gap-1 cursor-pointer ${
+                            isListening
+                              ? 'text-red-400 bg-red-950/60 ring-1 ring-red-500/40 animate-pulse'
+                              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                          }`}
+                          title="Voice input (Mic)"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                          </svg>
+                          <span className="hidden sm:inline text-[11px] font-medium">{isListening ? 'Listening...' : ''}</span>
+                        </button>
+
+                        {/* Ask Mentor Button */}
+                        <button
+                          onClick={() => handleSend()}
+                          disabled={(!input.trim() && !attachedDoc) || isTyping}
+                          className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-4 sm:px-5 py-2 rounded-xl font-semibold text-xs sm:text-sm transition-all disabled:opacity-40 shadow-sm hover:shadow-blue-500/25 flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <span>Ask Mentor</span>
+                          <span>→</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1521,21 +1523,6 @@ const App: React.FC = () => {
                       )}
                       <span className="hidden sm:inline text-xs font-medium">{isUploadingDoc ? 'Uploading...' : 'Attach'}</span>
                     </button>
-
-                    {/* Voice Input */}
-                    <button
-                      onClick={toggleSpeechRecognition}
-                      className={`p-1.5 sm:p-2 rounded-xl text-xs transition-colors flex items-center gap-1 cursor-pointer ${
-                        isListening
-                          ? 'text-red-400 bg-red-950/50 animate-pulse'
-                          : 'text-slate-400 hover:text-white hover:bg-slate-800'
-                      }`}
-                      title="Voice input"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                      </svg>
-                    </button>
                     
                     {/* Live Web Search */}
                     <button
@@ -1554,17 +1541,34 @@ const App: React.FC = () => {
                     </button>
                   </div>
 
-                  {/* Send Button */}
-                  <button
-                    onClick={() => handleSend()}
-                    disabled={(!input.trim() && !attachedDoc) || isTyping}
-                    className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-30 disabled:hover:from-blue-600 disabled:hover:to-indigo-600 text-white rounded-full flex items-center justify-center transition-all shadow-md active:scale-95 cursor-pointer shrink-0"
-                    title="Send message"
-                  >
-                    <svg className="w-4 h-4 transform rotate-90" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-                    </svg>
-                  </button>
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    {/* Voice Input (Mic) Aligned to Right */}
+                    <button
+                      onClick={toggleSpeechRecognition}
+                      className={`p-2 rounded-full text-xs transition-colors flex items-center justify-center cursor-pointer ${
+                        isListening
+                          ? 'text-red-400 bg-red-950/60 ring-2 ring-red-500/40 animate-pulse'
+                          : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                      }`}
+                      title="Voice input (Mic)"
+                    >
+                      <svg className="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                      </svg>
+                    </button>
+
+                    {/* Send Button */}
+                    <button
+                      onClick={() => handleSend()}
+                      disabled={(!input.trim() && !attachedDoc) || isTyping}
+                      className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-30 disabled:hover:from-blue-600 disabled:hover:to-indigo-600 text-white rounded-full flex items-center justify-center transition-all shadow-md active:scale-95 cursor-pointer shrink-0"
+                      title="Send message"
+                    >
+                      <svg className="w-4 h-4 transform rotate-90" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
