@@ -241,6 +241,17 @@ def process_rag_result(result: dict) -> dict:
     is_escalation = result.get("is_escalation", False)
     cta_type = result.get("cta_type", "")
     
+    # Marketing & Sales Lead Conversion: Check high-intent signals
+    high_intent_kw = ["profile", "evaluat", "shortlist", "backlog", "gpa", "cgpa", "eligib", "consult", "rejection", "aps", "blocked account", "sop review"]
+    is_high_intent = any(kw in question.lower() for kw in high_intent_kw)
+    if not is_escalation:
+        lead_qual = calculate_lead_score(user_profile, chat_history, question)
+        if lead_qual["category"] == "HOT" or lead_qual["score"] >= 65 or is_high_intent:
+            is_escalation = True
+            cta_type = "book_consultation"
+            if suggestions and "📅 Book free 30-min strategy session" not in suggestions:
+                suggestions.insert(0, "📅 Book free 30-min strategy session")
+    
     return {
         "response": clean_text if clean_text else raw_generation,
         "suggestions": suggestions[:4],
@@ -482,7 +493,16 @@ VERIFIED KNOWLEDGE & DOCUMENT CONTEXT:
                 append_session_message(request.phone, role="assistant", content=accumulated_text, channel="web")
                 update_session_profile(request.phone, user_profile, lead_qual["score"], lead_qual["category"])
                 
-                proactive_escalation = (decision == "ESCALATION") or user_turns >= 5 or (user_turns >= 4 and lead_qual["score"] >= 70)
+                # Marketing & Sales Lead Conversion Trigger
+                high_intent_kw = ["profile", "evaluat", "shortlist", "backlog", "gpa", "cgpa", "eligib", "consult", "rejection", "aps", "blocked account", "sop review"]
+                is_high_intent = any(kw in request.question.lower() for kw in high_intent_kw)
+                proactive_escalation = (
+                    (decision == "ESCALATION") or 
+                    (lead_qual["category"] == "HOT") or 
+                    (lead_qual["score"] >= 65) or 
+                    is_high_intent or 
+                    user_turns >= 4
+                )
                 if proactive_escalation and "📅 Book free 30-min strategy session" not in follow_ups:
                     follow_ups.insert(0, "📅 Book free 30-min strategy session")
 

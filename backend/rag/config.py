@@ -66,10 +66,14 @@ CURRENCY_RATES = {
 
 # --- Margam Contact Information ---
 MARGAM_CONTACT = {
-    "phone_primary": os.getenv("MARGAM_PHONE_PRIMARY", "+91 7981804359"),
+    "phone_primary": os.getenv("MARGAM_PHONE_PRIMARY", "+91 93479 97790"),
     "phone_secondary": os.getenv("MARGAM_PHONE_SECONDARY", "+91 83418 80359"),
+    "whatsapp_url": os.getenv("MARGAM_WHATSAPP_URL", "https://wa.me/919347997790"),
     "email": os.getenv("MARGAM_EMAIL", "hello@yourmargam.com"),
     "booking_url": os.getenv("MARGAM_BOOKING_URL", "https://calendly.com/yourmargam"),
+    "in_app_booking": "#book-consultation",
+    "cost_calculator": "#cost-calculator",
+    "sop_audit": "#audit-sop",
     "linkedin": os.getenv("MARGAM_LINKEDIN", "https://www.linkedin.com/company/yourmargam/"),
     "instagram": os.getenv("MARGAM_INSTAGRAM", "https://www.instagram.com/yourmargam/"),
     "youtube": os.getenv("MARGAM_YOUTUBE", "https://www.youtube.com/@jeevithrammamidala")

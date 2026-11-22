@@ -717,7 +717,47 @@ const App: React.FC = () => {
     ),
     thead: ({ node, ...props }: any) => <thead className="bg-slate-800/80 text-white font-semibold border-b border-slate-700" {...props} />,
     th: ({ node, ...props }: any) => <th className="p-3 font-semibold text-xs uppercase tracking-wider text-slate-300" {...props} />,
-    td: ({ node, ...props }: any) => <td className="p-3 border-t border-slate-800/80 text-slate-200 text-xs sm:text-sm" {...props} />
+    td: ({ node, ...props }: any) => <td className="p-3 border-t border-slate-800/80 text-slate-200 text-xs sm:text-sm" {...props} />,
+    a: ({ node, href, children, ...props }: any) => {
+      const isInternalAction = href?.startsWith('#');
+      if (isInternalAction) {
+        return (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              if (href === '#book-consultation' || href === '#consultation') {
+                setIsConsultModalOpen(true);
+              } else if (href === '#cost-calculator' || href === '#calculator') {
+                setIsCostCalcOpen(true);
+              } else if (href === '#audit-sop' || href === '#sop-review' || href === '#doc-review') {
+                setIsDocReviewOpen(true);
+              } else if (href === '#profile') {
+                setIsProfileOpen(true);
+              } else if (href === '#counselor-portal' || href === '#crm') {
+                setIsCounselorDashboardOpen(true);
+              }
+            }}
+            className="text-blue-400 hover:text-blue-300 font-semibold underline decoration-blue-400/50 hover:decoration-blue-300 inline-flex items-center gap-0.5 cursor-pointer transition-colors"
+          >
+            <span>{children}</span>
+            <span className="text-[11px]">↗</span>
+          </button>
+        );
+      }
+      return (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-400 hover:text-blue-300 font-medium underline decoration-blue-400/40 hover:decoration-blue-300 inline-flex items-center gap-0.5 transition-colors"
+          {...props}
+        >
+          <span>{children}</span>
+          <span className="text-[11px] opacity-75">↗</span>
+        </a>
+      );
+    }
   };
 
   return (
@@ -1358,9 +1398,10 @@ const App: React.FC = () => {
                             </button>
                             <a
                               href={`https://wa.me/919347997790?text=${encodeURIComponent(
-                                `Hi Margam! I'm ${userConfig?.name || 'Student'}. I'd like to book a free 30-min profile strategy session for ${
-                                  studentProfile.target_country || 'study abroad'
-                                }.`
+                                `Hi Margam! I'm ${userConfig?.name || 'Student'}. I would like to book a free 30-min strategy session.\n\n` +
+                                `Destination: ${studentProfile.target_country || 'Germany'}\n` +
+                                `Degree: ${studentProfile.degree_level || "Master's"}\n` +
+                                `Target Intake: ${studentProfile.target_intake || 'Fall 2026'}`
                               )}`}
                               target="_blank"
                               rel="noreferrer"
@@ -1371,6 +1412,26 @@ const App: React.FC = () => {
                               </svg>
                               <span>WhatsApp Directly</span>
                             </a>
+                            <button
+                              onClick={() => setIsDocReviewOpen(true)}
+                              className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-medium border border-slate-700 transition-colors flex items-center gap-1.5 cursor-pointer"
+                              title="Audit your SOP or CV"
+                            >
+                              <svg className="w-3.5 h-3.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              <span>Audit SOP</span>
+                            </button>
+                            <button
+                              onClick={() => setIsCostCalcOpen(true)}
+                              className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-medium border border-slate-700 transition-colors flex items-center gap-1.5 cursor-pointer"
+                              title="Calculate Living Costs"
+                            >
+                              <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                              </svg>
+                              <span>Cost Calculator</span>
+                            </button>
                           </div>
                         </div>
                       )}
