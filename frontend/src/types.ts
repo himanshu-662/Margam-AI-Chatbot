@@ -2,7 +2,15 @@
 export enum MessageRole {
   USER = 'user',
   BOT = 'bot',
+  ASSISTANT = 'assistant',
   SYSTEM = 'system'
+}
+
+export interface DocumentAttachment {
+  filename: string;
+  fileSize: number;
+  text?: string;
+  pageCount?: number;
 }
 
 export interface CitationItem {
@@ -21,6 +29,7 @@ export interface Message {
   suggestions?: string[];
   isStreaming?: boolean;
   attachments?: FileAttachment[];
+  document?: DocumentAttachment;
   is_escalation?: boolean;
   cta_type?: string;
 }

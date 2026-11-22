@@ -93,12 +93,19 @@ app.add_middleware(RequestLoggingMiddleware)
 # Initialize API router to mount on both root and /api prefixes
 router = APIRouter()
 
+class DocumentAttachment(BaseModel):
+    filename: str
+    text: str
+    file_size: Optional[int] = None
+    page_count: Optional[int] = None
+
 class ChatRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=5000, description="User's question")
     user_name: str = Field(..., min_length=1, max_length=200, description="User's name")
     phone: str = Field(..., min_length=1, max_length=50, description="User's phone number")
     chat_history: list[dict] = Field(default_factory=list, max_length=20, description="Chat history")
     use_web_search: bool = Field(default=False, description="Enable web search for this request")
+    document: Optional[DocumentAttachment] = Field(default=None, description="Uploaded document attachment")
     
     @field_validator('question')
     @classmethod
@@ -262,8 +269,17 @@ async def chat(request: ChatRequest):
         
         asyncio.create_task(log_lead_async(user_name, request.phone, request.question))
         
+        question_input = request.question
+        if request.document and request.document.text:
+            doc_prefix = (
+                f"\n\n[STUDENT ATTACHED DOCUMENT: {request.document.filename}]\n"
+                f"{request.document.text[:20000]}\n"
+                f"[END OF ATTACHED DOCUMENT]\n\n"
+            )
+            question_input = f"{doc_prefix}Student Question:\n{request.question}"
+
         inputs = {
-            "question": request.question,
+            "question": question_input,
             "user_name": user_name,
             "chat_history": request.chat_history,
             "use_web_search": request.use_web_search,
@@ -342,6 +358,10 @@ async def chat_stream(request: ChatRequest):
             routing_res = await loop.run_in_executor(None, route_question, state)
             decision = routing_res.get("router_decision", "RAG")
             
+            # If user uploaded a document, always route through RAG/analysis
+            if request.document and request.document.text:
+                decision = "RAG"
+            
             citations = []
             sources = []
             
@@ -377,6 +397,12 @@ async def chat_stream(request: ChatRequest):
                 
                 # Build context
                 context_parts = []
+                if request.document and request.document.text:
+                    context_parts.append(
+                        f"=== STUDENT ATTACHED DOCUMENT ({request.document.filename}) ===\n"
+                        f"{request.document.text[:25000]}\n"
+                        f"=== END OF ATTACHED DOCUMENT ==="
+                    )
                 for doc in docs[:6]:
                     src = os.path.basename(doc.metadata.get('source', 'Guide'))
                     pg = doc.metadata.get('page', 0) + 1
@@ -408,12 +434,15 @@ EXPLANATION & FORMATTING STYLE (ChatGPT-Style):
    - UK Maintenance Funds: £1,023/month outside London, £1,334/month inside London (up to 9 months).
    - Canada GIC requirement: CAD $20,635.
    - Australia Subclass 500 Living Capacity: AUD $29,710.
-5. **Margam's Value & Next Steps**:
+5. **Attached Document Analysis & Learning**:
+   - If the student has attached a document (SOP, CV, transcript, syllabus, or query doc), read, synthesize, and reason thoroughly over its content.
+   - Ground your advice in the exact details found in the document, highlighting key strengths, diagnosing weaknesses, evaluating eligibility, or directly answering their inquiries.
+6. **Margam's Value & Next Steps**:
    - Address {user_name} warmly and conversationally.
    - Conclude with logical next actions or thoughtful follow-up considerations.
    - Mention Margam's free mentorship (profile evaluations, SOP reviews by founder Jeevithram Mamidala, visa counseling) naturally as an available resource to help them take the next step.
 
-VERIFIED KNOWLEDGE CONTEXT:
+VERIFIED KNOWLEDGE & DOCUMENT CONTEXT:
 {context}"""),
                     ("human", "Conversation History:\n{history}\n\nStudent Question:\n{question}")
                 ])
@@ -501,6 +530,54 @@ Answer {user_name}'s message in a clear, comprehensive, and engaging manner.
             yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
             
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+@router.post("/upload-document")
+async def upload_document(file: UploadFile = File(...)):
+    """
+    Upload and parse student documents (PDF, DOCX, TXT, MD, CSV) for LLM learning and context analysis.
+    """
+    try:
+        content_bytes = await file.read()
+        filename = file.filename or "uploaded_document"
+        lower_name = filename.lower()
+        extracted_text = ""
+        page_count = 1
+        
+        if lower_name.endswith(".pdf"):
+            import pypdf
+            reader = pypdf.PdfReader(io.BytesIO(content_bytes))
+            page_count = len(reader.pages)
+            extracted_text = "\n".join([page.extract_text() or "" for page in reader.pages])
+        elif lower_name.endswith(".docx"):
+            try:
+                import zipfile
+                import xml.etree.ElementTree as ET
+                with zipfile.ZipFile(io.BytesIO(content_bytes)) as z:
+                    xml_content = z.read("word/document.xml")
+                    tree = ET.fromstring(xml_content)
+                    texts = [node.text for node in tree.iter() if node.tag.endswith('}t') and node.text]
+                    extracted_text = " ".join(texts)
+            except Exception:
+                extracted_text = content_bytes.decode("utf-8", errors="ignore")
+        else:
+            extracted_text = content_bytes.decode("utf-8", errors="ignore")
+            
+        extracted_text = extracted_text.strip()
+        if not extracted_text:
+            raise HTTPException(status_code=400, detail="Could not extract readable text from the document.")
+            
+        return {
+            "success": True,
+            "filename": filename,
+            "file_size": len(content_bytes),
+            "page_count": page_count,
+            "text": extracted_text[:40000]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error parsing uploaded document: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to process document: {str(e)}")
 
 @router.post("/analyze-document")
 async def analyze_document(

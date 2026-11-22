@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Message, MessageRole, CitationItem, StudentProfile, ChatSession } from './types';
+import { Message, MessageRole, CitationItem, StudentProfile, ChatSession, DocumentAttachment } from './types';
 import { CitationModal } from './components/CitationModal';
 import { StudentProfileDrawer } from './components/StudentProfileDrawer';
 import { CostCalculatorModal } from './components/CostCalculatorModal';
@@ -26,6 +26,10 @@ const App: React.FC = () => {
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  // Document attachment & learning state
+  const [attachedDoc, setAttachedDoc] = useState<DocumentAttachment | null>(null);
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+
   // User & Profile State
   const [userConfig, setUserConfig] = useState<UserConfig | null>(() => {
     try {
@@ -43,14 +47,20 @@ const App: React.FC = () => {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string>('default-session');
 
-  // Modals & Drawers
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  // Responsive Sidebar: Closed by default on mobile screens (< 768px)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768;
+    }
+    return false;
+  });
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isCostCalcOpen, setIsCostCalcOpen] = useState(false);
   const [isDocReviewOpen, setIsDocReviewOpen] = useState(false);
   const [isCitationModalOpen, setIsCitationModalOpen] = useState(false);
   const [isConsultModalOpen, setIsConsultModalOpen] = useState(false);
   const [isCounselorDashboardOpen, setIsCounselorDashboardOpen] = useState(false);
+  const [isMobileToolsOpen, setIsMobileToolsOpen] = useState(false);
   const [modalCitations, setModalCitations] = useState<CitationItem[]>([]);
   const [selectedCitation, setSelectedCitation] = useState<CitationItem | null>(null);
   const [isExporting, setIsExporting] = useState(false);
@@ -61,6 +71,9 @@ const App: React.FC = () => {
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const activeTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const activeFileInputRef = useRef<HTMLInputElement>(null);
   const streamingIntervalRef = useRef<any>(null);
   const isLanding = messages.length === 0;
 
@@ -315,6 +328,73 @@ const App: React.FC = () => {
     recognition.start();
   };
 
+  const adjustTextareaHeight = (el: HTMLTextAreaElement | null) => {
+    if (!el) return;
+    el.style.height = 'auto';
+    const newHeight = Math.min(el.scrollHeight, 200);
+    el.style.height = `${Math.max(newHeight, 40)}px`;
+  };
+
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 20 * 1024 * 1024) {
+      alert('File size exceeds 20MB. Please choose a smaller document.');
+      return;
+    }
+
+    setIsUploadingDoc(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/upload-document`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!res.ok) {
+        throw new Error(`Upload failed with status ${res.status}`);
+      }
+
+      const data = await res.json();
+      setAttachedDoc({
+        filename: data.filename || file.name,
+        fileSize: data.file_size || file.size,
+        text: data.text || '',
+        pageCount: data.page_count || 1
+      });
+    } catch (err: any) {
+      console.error('Document upload error:', err);
+      // Fallback for text-based formats
+      if (file.name.endsWith('.txt') || file.name.endsWith('.md') || file.name.endsWith('.csv')) {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          setAttachedDoc({
+            filename: file.name,
+            fileSize: file.size,
+            text: (evt.target?.result as string) || '',
+            pageCount: 1
+          });
+        };
+        reader.readAsText(file);
+      } else {
+        alert(`Could not process document: ${err.message || 'Network error'}. Please check your connection.`);
+      }
+    } finally {
+      setIsUploadingDoc(false);
+      if (e.target) e.target.value = '';
+    }
+  };
+
   const handleSend = async (customMessage?: string) => {
     const textToSend = customMessage || input;
     if (!textToSend.trim() || isTyping) return;
@@ -322,12 +402,18 @@ const App: React.FC = () => {
     const currentConfig = userConfig || { name: 'Student', phone: '+91 98765 43210' };
     const validatedPhone = currentConfig.phone && currentConfig.phone.trim() ? currentConfig.phone : '+91 98765 43210';
 
+    const docToAttach = attachedDoc;
+    setAttachedDoc(null);
     setInput('');
+    if (textareaRef.current) textareaRef.current.style.height = 'auto';
+    if (activeTextareaRef.current) activeTextareaRef.current.style.height = 'auto';
+
     const userMessage: Message = {
       id: Date.now().toString(),
       role: MessageRole.USER,
       content: textToSend,
-      timestamp: new Date()
+      timestamp: new Date(),
+      document: docToAttach || undefined
     };
 
     // Derive chat title from prompt and update sessions state immediately
@@ -391,7 +477,13 @@ const App: React.FC = () => {
           user_name: currentConfig.name,
           phone: validatedPhone,
           chat_history: history,
-          use_web_search: includeLatestInfo
+          use_web_search: includeLatestInfo,
+          document: docToAttach ? {
+            filename: docToAttach.filename,
+            file_size: docToAttach.fileSize,
+            page_count: docToAttach.pageCount,
+            text: docToAttach.text || ''
+          } : undefined
         })
       });
 
@@ -509,7 +601,13 @@ const App: React.FC = () => {
             user_name: currentConfig.name,
             phone: validatedPhone,
             chat_history: history,
-            use_web_search: includeLatestInfo
+            use_web_search: includeLatestInfo,
+            document: docToAttach ? {
+              filename: docToAttach.filename,
+              file_size: docToAttach.fileSize,
+              page_count: docToAttach.pageCount,
+              text: docToAttach.text || ''
+            } : undefined
           })
         });
 
@@ -623,20 +721,36 @@ const App: React.FC = () => {
   const subTextClass = 'text-slate-400';
 
   const markdownComponents = {
-    p: ({ node, ...props }: any) => <p className="mb-4 leading-relaxed text-slate-200" {...props} />,
-    ul: ({ node, ...props }: any) => <ul className="mb-4 pl-5 list-disc space-y-1.5 text-slate-200" {...props} />,
-    ol: ({ node, ...props }: any) => <ol className="mb-4 pl-5 list-decimal space-y-1.5 text-slate-200" {...props} />,
-    li: ({ node, ...props }: any) => <li className="pl-1" {...props} />,
+    p: ({ node, ...props }: any) => <p className="mb-4 leading-[1.75] text-[#ECECEC] text-[15px] sm:text-[16px]" {...props} />,
+    h1: ({ node, ...props }: any) => <h1 className="text-xl sm:text-2xl font-bold text-white mt-6 mb-3 tracking-tight" {...props} />,
+    h2: ({ node, ...props }: any) => <h2 className="text-lg sm:text-xl font-bold text-white mt-5 mb-2.5 tracking-tight" {...props} />,
+    h3: ({ node, ...props }: any) => <h3 className="text-base sm:text-lg font-semibold text-white mt-4 mb-2 tracking-tight" {...props} />,
+    ul: ({ node, ...props }: any) => <ul className="mb-4 pl-6 list-disc space-y-1.5 text-[#ECECEC] text-[15px] sm:text-[16px]" {...props} />,
+    ol: ({ node, ...props }: any) => <ol className="mb-4 pl-6 list-decimal space-y-1.5 text-[#ECECEC] text-[15px] sm:text-[16px]" {...props} />,
+    li: ({ node, ...props }: any) => <li className="pl-1 leading-[1.75]" {...props} />,
     strong: ({ node, ...props }: any) => <strong className="font-semibold text-white" {...props} />,
     code: ({ node, inline, ...props }: any) => {
       if (inline) {
-        return <code className="px-1.5 py-0.5 rounded text-xs font-mono font-medium bg-slate-800 text-blue-400" {...props} />;
+        return <code className="px-1.5 py-0.5 rounded text-xs font-mono font-medium bg-slate-800/80 text-blue-300 border border-slate-700/50" {...props} />;
       }
-      return <code className="block p-4 bg-slate-950 text-slate-100 rounded-xl overflow-x-auto text-xs font-mono" {...props} />;
+      return (
+        <div className="my-4 rounded-xl overflow-hidden border border-slate-800 bg-[#0E1524]">
+          <div className="px-4 py-1.5 bg-slate-850 border-b border-slate-800 text-[11px] font-mono text-slate-400">code</div>
+          <code className="block p-4 text-slate-100 overflow-x-auto text-xs font-mono leading-relaxed" {...props} />
+        </div>
+      );
     },
     blockquote: ({ node, ...props }: any) => (
-      <blockquote className="border-l-4 border-blue-500 pl-4 py-1 italic my-4 rounded-r-xl bg-blue-950/30 text-slate-400" {...props} />
-    )
+      <blockquote className="border-l-3 border-blue-500 pl-4 py-1 italic my-4 text-slate-300 bg-blue-950/20 rounded-r-lg" {...props} />
+    ),
+    table: ({ node, ...props }: any) => (
+      <div className="my-4 overflow-x-auto rounded-xl border border-slate-800">
+        <table className="w-full text-left text-sm border-collapse" {...props} />
+      </div>
+    ),
+    thead: ({ node, ...props }: any) => <thead className="bg-slate-800/80 text-white font-semibold border-b border-slate-700" {...props} />,
+    th: ({ node, ...props }: any) => <th className="p-3 font-semibold text-xs uppercase tracking-wider text-slate-300" {...props} />,
+    td: ({ node, ...props }: any) => <td className="p-3 border-t border-slate-800/80 text-slate-200 text-xs sm:text-sm" {...props} />
   };
 
   return (
@@ -760,11 +874,11 @@ const App: React.FC = () => {
         )}
 
         {/* Top Executive Navigation Bar */}
-        <header className="w-full h-16 flex items-center justify-between px-4 sm:px-6 z-40 bg-[#090E17]/85 backdrop-blur-md border-b border-slate-800/80 shrink-0">
-          <div className="flex items-center gap-3">
+        <header className="w-full h-16 flex items-center justify-between px-3 sm:px-6 z-40 bg-[#090E17]/90 backdrop-blur-md border-b border-slate-800/80 shrink-0 relative">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
               onClick={() => setIsSidebarOpen(prev => !prev)}
-              className="p-2 text-slate-300 hover:text-white hover:bg-slate-800/80 rounded-xl transition-all cursor-pointer"
+              className="p-2 text-slate-300 hover:text-white hover:bg-slate-800/80 rounded-xl transition-all cursor-pointer shrink-0"
               title={isSidebarOpen ? "Collapse sidebar" : "Open sidebar"}
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -772,15 +886,13 @@ const App: React.FC = () => {
               </svg>
             </button>
             
-            {/* Show logo if sidebar is collapsed or on mobile */}
-            {!isSidebarOpen && (
-              <img
-                src="/images/Margam-text-logo.png"
-                alt="Margam AI"
-                className="h-7 object-contain cursor-pointer hover:opacity-90 transition-opacity"
-                onClick={handleNewSession}
-              />
-            )}
+            {/* Show logo: Always on mobile so branding stays intact, or when desktop sidebar is closed */}
+            <img
+              src="/images/Margam-text-logo.png"
+              alt="Margam AI"
+              className={`h-7 sm:h-8 object-contain cursor-pointer hover:opacity-90 transition-opacity ${isSidebarOpen ? 'flex md:hidden' : 'flex'}`}
+              onClick={handleNewSession}
+            />
 
             <div className="hidden lg:flex items-center gap-2 pl-2 border-l border-slate-800 text-xs text-slate-400 font-medium">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -789,78 +901,138 @@ const App: React.FC = () => {
           </div>
 
           {/* Feature Action Buttons */}
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             {/* Book 1-on-1 Consultation */}
             <button
               onClick={() => setIsConsultModalOpen(true)}
-              className="px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
+              className="px-2.5 sm:px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer shrink-0"
               title="Book Free 30-Min Strategy Call"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               <span className="hidden sm:inline">Book 1-on-1 Call</span>
-              <span className="sm:hidden">Book</span>
+              <span className="sm:hidden text-[11px]">Book</span>
             </button>
 
-            {/* Cost Simulator */}
-            <button
-              onClick={() => setIsCostCalcOpen(true)}
-              className="px-2.5 sm:px-3 py-1.5 bg-slate-850 hover:bg-slate-800 border border-slate-700/80 text-slate-200 hover:text-blue-400 rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
-              title="Living Cost & Loan Simulator"
-            >
-              <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-              </svg>
-              <span className="hidden sm:inline">Cost Calculator</span>
-              <span className="sm:hidden">Costs</span>
-            </button>
-
-            {/* SOP & Resume Audit */}
-            <button
-              onClick={() => setIsDocReviewOpen(true)}
-              className="px-2.5 sm:px-3 py-1.5 bg-slate-850 hover:bg-slate-800 border border-slate-700/80 text-slate-200 hover:text-blue-400 rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
-              title="SOP & Resume AI Audit"
-            >
-              <svg className="w-3.5 h-3.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <span className="hidden sm:inline">Audit SOP / CV</span>
-              <span className="sm:hidden">Audit</span>
-            </button>
-
-            {/* Export Action Plan */}
-            {messages.length > 0 && (
+            {/* Desktop Action Buttons */}
+            <div className="hidden md:flex items-center gap-1.5">
+              {/* Cost Simulator */}
               <button
-                onClick={handleExportRoadmap}
-                disabled={isExporting}
+                onClick={() => setIsCostCalcOpen(true)}
                 className="px-2.5 sm:px-3 py-1.5 bg-slate-850 hover:bg-slate-800 border border-slate-700/80 text-slate-200 hover:text-blue-400 rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
-                title="Download Study Abroad Roadmap"
+                title="Living Cost & Loan Simulator"
               >
-                <svg className="w-3.5 h-3.5 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                 </svg>
-                <span className="hidden sm:inline">{isExporting ? 'Exporting...' : 'Export'}</span>
+                <span>Cost Calculator</span>
               </button>
-            )}
 
-            {/* Counselor CRM Portal */}
-            <button
-              onClick={() => setIsCounselorDashboardOpen(true)}
-              className="px-2.5 sm:px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 border border-slate-700 active:scale-95 cursor-pointer"
-              title="Counselor CRM & Conversion Portal"
-            >
-              <svg className="w-3.5 h-3.5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-              <span className="hidden md:inline">Counselor Portal</span>
-              <span className="md:hidden">CRM</span>
-            </button>
+              {/* SOP & Resume Audit */}
+              <button
+                onClick={() => setIsDocReviewOpen(true)}
+                className="px-2.5 sm:px-3 py-1.5 bg-slate-850 hover:bg-slate-800 border border-slate-700/80 text-slate-200 hover:text-blue-400 rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                title="SOP & Resume AI Audit"
+              >
+                <svg className="w-3.5 h-3.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span>Audit SOP / CV</span>
+              </button>
+
+              {/* Export Action Plan */}
+              {messages.length > 0 && (
+                <button
+                  onClick={handleExportRoadmap}
+                  disabled={isExporting}
+                  className="px-2.5 sm:px-3 py-1.5 bg-slate-850 hover:bg-slate-800 border border-slate-700/80 text-slate-200 hover:text-blue-400 rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                  title="Download Study Abroad Roadmap"
+                >
+                  <svg className="w-3.5 h-3.5 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  <span>{isExporting ? 'Exporting...' : 'Export'}</span>
+                </button>
+              )}
+
+              {/* Counselor CRM Portal */}
+              <button
+                onClick={() => setIsCounselorDashboardOpen(true)}
+                className="px-2.5 sm:px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 border border-slate-700 active:scale-95 cursor-pointer"
+                title="Counselor CRM & Conversion Portal"
+              >
+                <svg className="w-3.5 h-3.5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                <span>Counselor Portal</span>
+              </button>
+            </div>
+
+            {/* Mobile Tools Dropdown */}
+            <div className="relative md:hidden">
+              <button
+                onClick={() => setIsMobileToolsOpen(prev => !prev)}
+                className="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1 cursor-pointer shrink-0"
+                title="Tools & Features"
+              >
+                <span className="text-[11px]">Tools</span>
+                <svg className="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {isMobileToolsOpen && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setIsMobileToolsOpen(false)} />
+                  <div className="absolute right-0 top-full mt-2 w-48 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-2 z-40 space-y-1 animate-stage text-xs font-medium">
+                    <button
+                      onClick={() => { setIsCostCalcOpen(true); setIsMobileToolsOpen(false); }}
+                      className="w-full text-left px-3 py-2 rounded-xl text-slate-200 hover:bg-slate-800 hover:text-emerald-400 flex items-center gap-2 transition-colors cursor-pointer"
+                    >
+                      <svg className="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      </svg>
+                      <span>Cost Calculator</span>
+                    </button>
+                    <button
+                      onClick={() => { setIsDocReviewOpen(true); setIsMobileToolsOpen(false); }}
+                      className="w-full text-left px-3 py-2 rounded-xl text-slate-200 hover:bg-slate-800 hover:text-blue-400 flex items-center gap-2 transition-colors cursor-pointer"
+                    >
+                      <svg className="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span>Audit SOP / CV</span>
+                    </button>
+                    <button
+                      onClick={() => { setIsCounselorDashboardOpen(true); setIsMobileToolsOpen(false); }}
+                      className="w-full text-left px-3 py-2 rounded-xl text-slate-200 hover:bg-slate-800 hover:text-indigo-400 flex items-center gap-2 transition-colors cursor-pointer"
+                    >
+                      <svg className="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                      </svg>
+                      <span>Counselor CRM</span>
+                    </button>
+                    {messages.length > 0 && (
+                      <button
+                        onClick={() => { handleExportRoadmap(); setIsMobileToolsOpen(false); }}
+                        className="w-full text-left px-3 py-2 rounded-xl text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2 transition-colors cursor-pointer"
+                      >
+                        <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        <span>Export Roadmap</span>
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
 
             {/* Student Profile Drawer */}
             <button
               onClick={() => setIsProfileOpen(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold transition-all border border-slate-700 cursor-pointer"
+              className="flex items-center gap-1.5 p-1.5 sm:px-2.5 sm:py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold transition-all border border-slate-700 cursor-pointer shrink-0"
               title="View Student Profile"
             >
               <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold">
@@ -874,7 +1046,7 @@ const App: React.FC = () => {
             {/* New Chat Button */}
             <button
               onClick={handleNewSession}
-              className="p-2 text-slate-400 hover:text-blue-400 rounded-xl hover:bg-slate-800 transition-colors cursor-pointer"
+              className="p-2 text-slate-400 hover:text-blue-400 rounded-xl hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
               title="New Session"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -918,27 +1090,88 @@ const App: React.FC = () => {
                   </p>
                 </div>
 
-                {/* Floating Command Dock (Hero) */}
+                {/* Floating Command Dock (Hero) - ChatGPT Style */}
                 <div className="max-w-2xl mx-auto w-full">
-                  <div className="bg-slate-900/90 backdrop-blur-xl rounded-3xl border border-slate-800 shadow-xl p-3 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all">
+                  <div className="bg-[#151D2A]/90 backdrop-blur-xl rounded-[28px] border border-slate-700/80 shadow-2xl p-2.5 sm:p-3 focus-within:border-blue-500/80 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
+                    {/* Attachment preview chip if a document is selected */}
+                    {attachedDoc && (
+                      <div className="flex items-center justify-between px-3 py-1.5 mb-2 bg-blue-950/70 border border-blue-800/80 rounded-2xl text-xs text-blue-200 animate-stage">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <svg className="w-4 h-4 text-blue-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          <span className="font-semibold truncate max-w-[200px] sm:max-w-xs">{attachedDoc.filename}</span>
+                          <span className="text-[10px] text-blue-300 shrink-0">
+                            {attachedDoc.pageCount ? `(${attachedDoc.pageCount} pgs • ${formatFileSize(attachedDoc.fileSize)})` : `(${formatFileSize(attachedDoc.fileSize)})`}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => setAttachedDoc(null)}
+                          className="p-1 hover:text-white hover:bg-blue-900/60 rounded-lg transition-colors cursor-pointer"
+                          title="Remove attachment"
+                        >
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Hidden file input */}
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileUpload}
+                      accept=".pdf,.doc,.docx,.txt,.csv"
+                      className="hidden"
+                    />
+
                     <textarea
                       ref={textareaRef}
                       value={input}
-                      onChange={e => setInput(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
-                      placeholder="Ask anything about visas, universities, blocked accounts, SOPs..."
-                      rows={2}
-                      className="w-full bg-transparent p-2 text-sm sm:text-base text-white placeholder:text-slate-500 focus:outline-none resize-none leading-relaxed"
+                      onChange={e => {
+                        setInput(e.target.value);
+                        adjustTextareaHeight(e.target);
+                      }}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSend();
+                        }
+                      }}
+                      placeholder={attachedDoc ? `Ask about ${attachedDoc.filename}...` : "Ask anything about visas, universities, blocked accounts, SOPs..."}
+                      rows={1}
+                      className="w-full bg-transparent px-2 sm:px-3 py-1.5 text-sm sm:text-base text-white placeholder:text-slate-500 focus:outline-none resize-none leading-relaxed max-h-[200px] overflow-y-auto"
+                      style={{ minHeight: '44px' }}
                     />
 
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 px-1">
-                      <div className="flex items-center gap-1.5">
+                    <div className="flex items-center justify-between pt-1.5 border-t border-slate-800/80 px-1">
+                      <div className="flex items-center gap-1 sm:gap-1.5">
+                        {/* Attach Document Button */}
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={isUploadingDoc}
+                          className="p-1.5 sm:p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors flex items-center gap-1 cursor-pointer"
+                          title="Upload PDF, DOCX, or document"
+                        >
+                          {isUploadingDoc ? (
+                            <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                          ) : (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                            </svg>
+                          )}
+                          <span className="hidden sm:inline text-xs font-medium">{isUploadingDoc ? 'Uploading...' : 'Attach'}</span>
+                        </button>
+
+                        {/* Voice Input Button */}
                         <button
                           onClick={toggleSpeechRecognition}
-                          className={`p-2 rounded-xl text-xs transition-colors flex items-center gap-1 ${
+                          className={`p-1.5 sm:p-2 rounded-xl text-xs transition-colors flex items-center gap-1 cursor-pointer ${
                             isListening
                               ? 'text-red-400 bg-red-950/50 animate-pulse'
-                              : 'text-slate-400 hover:text-blue-400 hover:bg-slate-800'
+                              : 'text-slate-400 hover:text-white hover:bg-slate-800'
                           }`}
                           title="Voice input"
                         >
@@ -948,26 +1181,28 @@ const App: React.FC = () => {
                           <span className="hidden sm:inline text-[11px] font-medium">{isListening ? 'Listening...' : 'Voice'}</span>
                         </button>
 
+                        {/* Live Web Search */}
                         <button
                           onClick={() => setIncludeLatestInfo(!includeLatestInfo)}
-                          className={`p-2 rounded-xl text-xs transition-colors flex items-center gap-1.5 cursor-pointer ${
+                          className={`px-2 py-1 rounded-xl text-xs font-medium flex items-center gap-1.5 cursor-pointer transition-colors ${
                             includeLatestInfo
                               ? 'text-blue-300 bg-blue-950/60 font-semibold border border-blue-800'
-                              : 'text-slate-400 hover:text-blue-400 hover:bg-slate-800'
+                              : 'text-slate-400 hover:text-white hover:bg-slate-800'
                           }`}
                           title="Search live web data"
                         >
                           <svg className="w-3.5 h-3.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                           </svg>
-                          <span className="text-[11px] font-medium">Live Web Search</span>
+                          <span className="hidden sm:inline text-[11px] font-medium">Live Search</span>
                         </button>
                       </div>
 
+                      {/* Ask Mentor Button */}
                       <button
                         onClick={() => handleSend()}
-                        disabled={!input.trim()}
-                        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-5 py-2 rounded-xl font-semibold text-xs sm:text-sm transition-all disabled:opacity-40 shadow-sm hover:shadow-blue-500/25 flex items-center gap-1.5 cursor-pointer"
+                        disabled={(!input.trim() && !attachedDoc) || isTyping}
+                        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-4 sm:px-5 py-2 rounded-xl font-semibold text-xs sm:text-sm transition-all disabled:opacity-40 shadow-sm hover:shadow-blue-500/25 flex items-center gap-1.5 cursor-pointer"
                       >
                         <span>Ask Mentor</span>
                         <span>→</span>
@@ -992,39 +1227,68 @@ const App: React.FC = () => {
               </div>
             </div>
           ) : (
-            /* Chat Messages Feed */
-            <div className="max-w-3xl mx-auto pt-8 pb-36 px-4 sm:px-6 space-y-7">
+            /* Chat Messages Feed - ChatGPT Style */
+            <div className="max-w-3xl mx-auto pt-6 pb-40 px-3 sm:px-6 space-y-7">
               {messages.map(msg => (
                 <div key={msg.id} className="animate-stage group">
                   {msg.role === MessageRole.USER ? (
                     <div className="flex justify-end">
-                      <div className="max-w-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl rounded-tr-xs p-4 sm:p-5 shadow-sm space-y-1">
-                        <div className="text-[10px] font-semibold text-blue-200 uppercase tracking-wider">
-                          {formatTime(msg.timestamp)}
-                        </div>
-                        <p className="text-sm sm:text-base leading-relaxed font-medium">
+                      <div className="max-w-[85%] sm:max-w-[72%] bg-[#222B3B] hover:bg-[#263143] border border-slate-700/60 text-slate-100 rounded-3xl rounded-tr-md px-5 py-3.5 shadow-xs transition-colors space-y-2">
+                        {/* Attached Document Preview Badge on User Message */}
+                        {msg.document && (
+                          <div className="flex items-center gap-2.5 px-3 py-2 bg-slate-900/80 rounded-2xl border border-slate-700/80 text-xs">
+                            <svg className="w-4 h-4 text-blue-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <div className="min-w-0 flex-1">
+                              <div className="font-semibold text-slate-100 truncate text-xs">{msg.document.filename}</div>
+                              <div className="text-[10px] text-slate-400">
+                                {msg.document.pageCount ? `${msg.document.pageCount} pgs • ` : ''}
+                                {formatFileSize(msg.document.fileSize)}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        <p className="text-[15px] sm:text-[16px] leading-[1.7] font-normal whitespace-pre-wrap break-words">
                           {msg.content}
                         </p>
+                        <div className="text-[10px] text-right font-medium text-slate-400">
+                          {formatTime(msg.timestamp)}
+                        </div>
                       </div>
                     </div>
                   ) : (
-                    <div className={`rounded-3xl p-6 sm:p-8 backdrop-blur-xl border transition-all ${cardSurfaceClass}`}>
-                      {/* Top Action Ribbon */}
-                      <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-800/60">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center text-xs font-bold shadow-xs">
-                            M
-                          </div>
-                          <span className="text-xs font-bold uppercase tracking-wider">
-                            Margam Advisor
-                          </span>
+                    /* Assistant Response: Zero Card Box, Zero Border — Pure ChatGPT Style */
+                    <div className="w-full text-slate-100 space-y-3 pl-1 sm:pl-2">
+                      {/* Margam AI Minimalist Header */}
+                      <div className="flex items-center gap-2.5 select-none pt-1">
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center text-[10px] font-bold shadow-xs shrink-0">
+                          M
                         </div>
-                        
-                        <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-semibold text-slate-200 tracking-wide">
+                          Margam AI
+                        </span>
+                      </div>
+
+                      {/* Main Message Content */}
+                      <div className="chatgpt-prose prose prose-invert max-w-none text-[15px] sm:text-[16px] leading-[1.75] text-[#ECECEC] font-normal">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                          {msg.content}
+                        </ReactMarkdown>
+
+                        {/* Blinking streaming cursor */}
+                        {msg.isStreaming && (
+                          <span className="inline-block w-2 h-4.5 ml-1 bg-blue-400 animate-pulse align-middle rounded-xs"></span>
+                        )}
+                      </div>
+
+                      {/* ChatGPT-style Ghost Action Bar */}
+                      {!msg.isStreaming && msg.content && (
+                        <div className="flex items-center flex-wrap gap-2 pt-1 text-slate-400">
                           {/* Audio TTS */}
                           <button
                             onClick={() => toggleSpeak(msg.id, msg.content)}
-                            className="p-1.5 rounded-lg text-xs transition-colors text-slate-400 hover:text-blue-400 hover:bg-slate-800"
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/80 transition-colors cursor-pointer"
                             title={speakingMessageId === msg.id ? 'Stop audio' : 'Listen to response'}
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1035,11 +1299,11 @@ const App: React.FC = () => {
                           {/* Copy button */}
                           <button
                             onClick={() => handleCopy(msg.id, msg.content)}
-                            className="p-1.5 text-slate-400 hover:text-blue-400 hover:bg-slate-800 rounded-lg text-xs transition-colors"
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/80 transition-colors cursor-pointer"
                             title="Copy response"
                           >
                             {copiedId === msg.id ? (
-                              <span className="text-emerald-400 text-xs font-bold inline-flex items-center gap-1">
+                              <span className="text-emerald-400 text-xs font-semibold inline-flex items-center gap-1">
                                 <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
                                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                 </svg>
@@ -1051,24 +1315,29 @@ const App: React.FC = () => {
                               </svg>
                             )}
                           </button>
+
+                          {/* Sources Badge */}
+                          {msg.citations && msg.citations.length > 0 && (
+                            <button
+                              onClick={() => {
+                                setModalCitations(msg.citations || []);
+                                setSelectedCitation(msg.citations?.[0] || null);
+                                setIsCitationModalOpen(true);
+                              }}
+                              className="px-2.5 py-1 rounded-lg text-xs font-medium text-blue-400 hover:text-blue-300 hover:bg-blue-950/40 border border-blue-900/50 transition-colors flex items-center gap-1.5 cursor-pointer"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                              </svg>
+                              <span>{msg.citations.length} Sources</span>
+                            </button>
+                          )}
                         </div>
-                      </div>
-
-                      {/* Main Message Content */}
-                      <div className="prose max-w-none text-sm sm:text-base leading-relaxed">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                          {msg.content}
-                        </ReactMarkdown>
-
-                        {/* Blinking streaming cursor */}
-                        {msg.isStreaming && (
-                          <span className="inline-block w-2 h-4 ml-1 bg-blue-500 animate-pulse align-middle"></span>
-                        )}
-                      </div>
+                      )}
 
                       {/* Consultation Strategy Escalation Card */}
                       {(msg.is_escalation || msg.cta_type === 'book_consultation') && (
-                        <div className="mt-5 p-5 bg-gradient-to-br from-slate-850 via-blue-950/40 to-slate-900 rounded-2xl border border-blue-900/60 shadow-sm space-y-3">
+                        <div className="mt-5 p-5 sm:p-6 bg-gradient-to-br from-[#111827] via-[#131d2e] to-[#0f172a] rounded-2xl border border-blue-900/60 shadow-lg space-y-3">
                           <div className="flex items-start justify-between gap-3">
                             <div>
                               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-950 text-blue-300 text-[10px] font-bold uppercase tracking-wider mb-1.5 border border-blue-800">
@@ -1139,16 +1408,13 @@ const App: React.FC = () => {
 
                       {/* Follow-up Suggestion Chips */}
                       {msg.suggestions && msg.suggestions.length > 0 && (
-                        <div className="mt-5 pt-3 border-t border-slate-800 space-y-2">
-                          <span className={`text-[11px] font-semibold uppercase tracking-wider block ${subTextClass}`}>
-                            Suggested Next Questions
-                          </span>
+                        <div className="mt-4 pt-2 space-y-2">
                           <div className="flex flex-wrap gap-2">
                             {msg.suggestions.map((s, sIdx) => (
                               <button
                                 key={sIdx}
                                 onClick={() => handleSend(s)}
-                                className="text-xs px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-blue-950/50 text-slate-200 hover:text-blue-300 border border-slate-700 hover:border-blue-700 transition-all font-medium"
+                                className="text-xs px-3.5 py-1.5 rounded-full bg-slate-800/80 hover:bg-blue-950/60 text-slate-200 hover:text-blue-300 border border-slate-700/80 hover:border-blue-700 transition-all font-medium cursor-pointer"
                               >
                                 {s}
                               </button>
@@ -1162,14 +1428,14 @@ const App: React.FC = () => {
               ))}
 
               {isTyping && (
-                <div className="bg-slate-900/90 backdrop-blur-md rounded-2xl p-4 border border-slate-800 shadow-xs flex items-center gap-3">
+                <div className="w-full flex items-center gap-3 pl-2 py-2">
                   <div className="flex gap-1">
-                    <span className="w-2 h-2 rounded-full bg-blue-500 animate-bounce"></span>
-                    <span className="w-2 h-2 rounded-full bg-blue-500 animate-bounce [animation-delay:0.2s]"></span>
-                    <span className="w-2 h-2 rounded-full bg-blue-500 animate-bounce [animation-delay:0.4s]"></span>
+                    <span className="w-2 h-2 rounded-full bg-blue-400 animate-bounce"></span>
+                    <span className="w-2 h-2 rounded-full bg-blue-400 animate-bounce [animation-delay:0.2s]"></span>
+                    <span className="w-2 h-2 rounded-full bg-blue-400 animate-bounce [animation-delay:0.4s]"></span>
                   </div>
                   <span className="text-xs font-medium text-slate-400">
-                    {statusMessage || 'Margam Advisor is reasoning...'}
+                    {statusMessage || 'Margam AI is reasoning...'}
                   </span>
                 </div>
               )}
@@ -1179,29 +1445,90 @@ const App: React.FC = () => {
           )}
         </div>
 
-        {/* Floating Bottom Input Bar for Active Chat */}
+        {/* Floating Bottom Input Bar for Active Chat - ChatGPT Style */}
         {!isLanding && (
-          <div className="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-[#090E17] via-[#090E17]/90 to-transparent z-20">
-            <div className="max-w-3xl mx-auto">
-              <div className="bg-slate-900/95 backdrop-blur-xl rounded-2xl border border-slate-800 shadow-lg p-2.5 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all">
-                <textarea
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
-                  placeholder="Ask a follow-up question..."
-                  rows={1}
-                  className="w-full bg-transparent p-2 text-sm text-white placeholder:text-slate-500 focus:outline-none resize-none"
-                  style={{ minHeight: '36px', maxHeight: '120px' }}
+          <div className="absolute bottom-0 inset-x-0 p-3 sm:p-4 bg-gradient-to-t from-[#090E17] via-[#090E17]/95 to-transparent z-20">
+            <div className="max-w-3xl mx-auto w-full">
+              <div className="bg-[#151D2A]/95 backdrop-blur-xl rounded-[28px] border border-slate-700/80 shadow-2xl p-2.5 sm:p-3 focus-within:border-blue-500/80 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
+                {/* Document Attachment Chip if selected */}
+                {attachedDoc && (
+                  <div className="flex items-center justify-between px-3 py-1.5 mb-2 bg-blue-950/70 border border-blue-800/80 rounded-2xl text-xs text-blue-200 animate-stage">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <svg className="w-4 h-4 text-blue-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span className="font-semibold truncate max-w-[180px] sm:max-w-xs">{attachedDoc.filename}</span>
+                      <span className="text-[10px] text-blue-300 shrink-0">
+                        {attachedDoc.pageCount ? `(${attachedDoc.pageCount} pgs • ${formatFileSize(attachedDoc.fileSize)})` : `(${formatFileSize(attachedDoc.fileSize)})`}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setAttachedDoc(null)}
+                      className="p-1 hover:text-white hover:bg-blue-900/60 rounded-lg transition-colors cursor-pointer"
+                      title="Remove attachment"
+                    >
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
+
+                {/* Hidden File Input */}
+                <input
+                  type="file"
+                  ref={activeFileInputRef}
+                  onChange={handleFileUpload}
+                  accept=".pdf,.doc,.docx,.txt,.csv"
+                  className="hidden"
                 />
 
-                <div className="flex items-center justify-between pt-1 border-t border-slate-800 px-1">
-                  <div className="flex items-center gap-1">
+                <textarea
+                  ref={activeTextareaRef}
+                  value={input}
+                  onChange={e => {
+                    setInput(e.target.value);
+                    adjustTextareaHeight(e.target);
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                  placeholder={attachedDoc ? `Ask about ${attachedDoc.filename}...` : "Ask a follow-up question..."}
+                  rows={1}
+                  className="w-full bg-transparent px-2 sm:px-3 py-1.5 text-sm sm:text-base text-white placeholder:text-slate-500 focus:outline-none resize-none leading-relaxed max-h-[200px] overflow-y-auto"
+                  style={{ minHeight: '40px' }}
+                />
+
+                <div className="flex items-center justify-between pt-1.5 border-t border-slate-800/80 px-1">
+                  <div className="flex items-center gap-1 sm:gap-1.5">
+                    {/* File Attachment Button */}
+                    <button
+                      type="button"
+                      onClick={() => activeFileInputRef.current?.click()}
+                      disabled={isUploadingDoc}
+                      className="p-1.5 sm:p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors flex items-center gap-1 cursor-pointer"
+                      title="Upload PDF, DOCX, or document"
+                    >
+                      {isUploadingDoc ? (
+                        <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                        </svg>
+                      )}
+                      <span className="hidden sm:inline text-xs font-medium">{isUploadingDoc ? 'Uploading...' : 'Attach'}</span>
+                    </button>
+
+                    {/* Voice Input */}
                     <button
                       onClick={toggleSpeechRecognition}
-                      className={`p-1.5 rounded-lg text-xs ${
+                      className={`p-1.5 sm:p-2 rounded-xl text-xs transition-colors flex items-center gap-1 cursor-pointer ${
                         isListening
                           ? 'text-red-400 bg-red-950/50 animate-pulse'
-                          : 'text-slate-400 hover:text-blue-400'
+                          : 'text-slate-400 hover:text-white hover:bg-slate-800'
                       }`}
                       title="Voice input"
                     >
@@ -1210,28 +1537,33 @@ const App: React.FC = () => {
                       </svg>
                     </button>
                     
+                    {/* Live Web Search */}
                     <button
                       onClick={() => setIncludeLatestInfo(!includeLatestInfo)}
-                      className={`px-2 py-1 rounded-lg text-[11px] font-medium flex items-center gap-1 ${
+                      className={`px-2 py-1 rounded-xl text-xs font-medium flex items-center gap-1 cursor-pointer transition-colors ${
                         includeLatestInfo
                           ? 'text-blue-300 bg-blue-950/60 border border-blue-800'
-                          : 'text-slate-400 hover:text-blue-400'
+                          : 'text-slate-400 hover:text-white hover:bg-slate-800'
                       }`}
-                      title="Web Search live data"
+                      title="Search live web data"
                     >
-                      <svg className="w-3 h-3 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="w-3.5 h-3.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                       </svg>
-                      <span>Live Search</span>
+                      <span className="hidden sm:inline">Live Search</span>
                     </button>
                   </div>
 
+                  {/* Send Button */}
                   <button
                     onClick={() => handleSend()}
-                    disabled={!input.trim()}
-                    className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-1.5 rounded-xl font-semibold text-xs transition-all disabled:opacity-40 shadow-xs"
+                    disabled={(!input.trim() && !attachedDoc) || isTyping}
+                    className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-30 disabled:hover:from-blue-600 disabled:hover:to-indigo-600 text-white rounded-full flex items-center justify-center transition-all shadow-md active:scale-95 cursor-pointer shrink-0"
+                    title="Send message"
                   >
-                    Send
+                    <svg className="w-4 h-4 transform rotate-90" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                    </svg>
                   </button>
                 </div>
               </div>
