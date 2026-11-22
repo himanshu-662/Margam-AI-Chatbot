@@ -21,9 +21,9 @@ import uuid
 import urllib.parse
 import aiofiles
 from typing import Optional, List, Dict, Any
-from lead_scoring import calculate_lead_score, generate_counselor_dossier, save_lead_dossier
+from lead_scoring import calculate_lead_score, generate_counselor_dossier, save_lead_dossier, LEADS_DIR, LEADS_JSON
 from session_store import (
-    append_session_message, update_session_profile, mark_session_as_booked, get_or_create_session
+    append_session_message, update_session_profile, mark_session_as_booked, get_or_create_session, SESSIONS_DIR
 )
 from whatsapp_gateway import verify_webhook, process_incoming_whatsapp_message, send_whatsapp_message
 from nudge_engine import find_pending_nudges, trigger_reengagement_nudges
@@ -618,10 +618,16 @@ async def analyze_document(
                 if text:
                     extracted_text += text + "\n"
         elif filename.endswith(".docx"):
-            import docx
-            doc = docx.Document(io.BytesIO(content_bytes))
-            for p in doc.paragraphs:
-                extracted_text += p.text + "\n"
+            try:
+                import zipfile
+                import xml.etree.ElementTree as ET
+                with zipfile.ZipFile(io.BytesIO(content_bytes)) as z:
+                    xml_content = z.read("word/document.xml")
+                    tree = ET.fromstring(xml_content)
+                    texts = [node.text for node in tree.iter() if node.tag.endswith('}t') and node.text]
+                    extracted_text = " ".join(texts)
+            except Exception:
+                extracted_text = content_bytes.decode("utf-8", errors="ignore")
         else:
             extracted_text = content_bytes.decode("utf-8", errors="ignore")
             
@@ -794,7 +800,7 @@ async def get_leads():
     """
     Return all recorded consultation leads and qualification statuses for counselor review.
     """
-    leads_json_path = os.path.join(os.path.dirname(__file__), "data", "leads.json")
+    leads_json_path = LEADS_JSON
     if not os.path.exists(leads_json_path):
         return {"leads": []}
     try:
@@ -811,7 +817,7 @@ async def get_lead_dossier(booking_id: str):
     """
     Fetch the generated markdown handover dossier for a specific booked consultation.
     """
-    leads_dir = os.path.join(os.path.dirname(__file__), "data", "leads")
+    leads_dir = LEADS_DIR
     if not os.path.exists(leads_dir):
         raise HTTPException(status_code=404, detail="Dossier directory not found.")
         
@@ -842,8 +848,8 @@ async def get_analytics_metrics():
     - Chatbot-to-consultation conversion rate
     - Destination popularity breakdown
     """
-    leads_json_path = os.path.join(os.path.dirname(__file__), "data", "leads.json")
-    sessions_dir = os.path.join(os.path.dirname(__file__), "data", "sessions")
+    leads_json_path = LEADS_JSON
+    sessions_dir = SESSIONS_DIR
     
     leads = []
     if os.path.exists(leads_json_path):

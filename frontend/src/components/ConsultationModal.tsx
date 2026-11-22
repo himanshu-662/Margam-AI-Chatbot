@@ -130,16 +130,16 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({
 
             {/* Lead Qualification Pill */}
             {bookingResult?.lead_score && (
-              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 text-left text-xs space-y-1">
+              <div className="p-3 bg-slate-800/80 rounded-2xl border border-slate-700 text-left text-xs space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-slate-500 uppercase tracking-wider text-[10px]">
+                  <span className="font-semibold text-slate-400 uppercase tracking-wider text-[10px]">
                     Profile Readiness Score:
                   </span>
-                  <span className="font-bold text-emerald-600">
+                  <span className="font-bold text-emerald-400">
                     {bookingResult.lead_score} / 100 ({bookingResult.lead_category} PRIORITY)
                   </span>
                 </div>
-                <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-700/60">
                   <div
                     className="bg-emerald-500 h-full rounded-full transition-all"
                     style={{ width: `${bookingResult.lead_score}%` }}
@@ -154,12 +154,12 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowDossier(!showDossier)}
-                  className="text-xs text-blue-600 font-semibold hover:underline flex items-center gap-1"
+                  className="text-xs text-blue-400 font-semibold hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   <span>{showDossier ? '▼ Hide Counselor Dossier' : '▶ View Counselor Handover Dossier'}</span>
                 </button>
                 {showDossier && (
-                  <div className="mt-2 p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-800 max-h-48 overflow-y-auto prose prose-slate">
+                  <div className="mt-2 p-4 bg-slate-950/80 rounded-xl border border-slate-800 text-xs text-slate-200 max-h-48 overflow-y-auto prose prose-invert">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
                       {bookingResult.dossier_markdown}
                     </ReactMarkdown>
@@ -246,7 +246,7 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({
             <form onSubmit={handleBook} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1">
+                  <label className="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
                     Your Name
                   </label>
                   <input
@@ -254,11 +254,11 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({
                     value={name}
                     onChange={e => setName(e.target.value)}
                     required
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:bg-white focus:outline-none focus:border-blue-500"
+                    className="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1">
+                  <label className="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
                     Phone / WhatsApp
                   </label>
                   <input
@@ -266,20 +266,20 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({
                     value={contactPhone}
                     onChange={e => setContactPhone(e.target.value)}
                     required
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:bg-white focus:outline-none focus:border-blue-500"
+                    className="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1">
+                  <label className="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
                     Country
                   </label>
                   <select
                     value={targetCountry}
                     onChange={e => setTargetCountry(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:border-blue-500"
+                    className="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500 transition-colors"
                   >
                     <option value="Germany">Germany (€0 Tuition)</option>
                     <option value="United Kingdom">United Kingdom</option>
@@ -290,13 +290,13 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1">
+                  <label className="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
                     Degree
                   </label>
                   <select
                     value={degree}
                     onChange={e => setDegree(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:border-blue-500"
+                    className="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500 transition-colors"
                   >
                     <option value="Master's">Master's / MS</option>
                     <option value="Bachelor's">Bachelor's</option>
@@ -305,13 +305,13 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1">
+                  <label className="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
                     Target Intake
                   </label>
                   <select
                     value={intake}
                     onChange={e => setIntake(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:border-blue-500"
+                    className="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500 transition-colors"
                   >
                     <option value="Fall 2026">Fall 2026 (Winter)</option>
                     <option value="Spring 2027">Spring 2027 (Summer)</option>
@@ -321,13 +321,13 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1">
+                <label className="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
                   Preferred Time Slot
                 </label>
                 <select
                   value={preferredTime}
                   onChange={e => setPreferredTime(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:border-blue-500"
+                  className="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500 transition-colors"
                 >
                   <option value="Today Evening (6 PM - 8 PM)">Today Evening (6 PM - 8 PM)</option>
                   <option value="Tomorrow Morning (10 AM - 1 PM)">Tomorrow Morning (10 AM - 1 PM)</option>

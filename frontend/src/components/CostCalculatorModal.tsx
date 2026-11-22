@@ -275,15 +275,15 @@ export const CostCalculatorModal: React.FC<CostCalculatorModalProps> = ({
 
           {/* Conditional Options */}
           {country === 'uk' && (
-            <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <div className="flex items-center gap-3 p-3 bg-slate-800/80 rounded-xl border border-slate-700">
               <input
                 type="checkbox"
                 id="london-toggle"
                 checked={isLondon}
                 onChange={e => setIsLondon(e.target.checked)}
-                className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                className="w-4 h-4 text-blue-600 rounded border-slate-700 bg-slate-900 focus:ring-blue-500 cursor-pointer"
               />
-              <label htmlFor="london-toggle" className="text-xs font-medium text-slate-700 cursor-pointer">
+              <label htmlFor="london-toggle" className="text-xs font-medium text-slate-300 cursor-pointer">
                 University is located inside Greater London (Requires £1,334/mo maintenance vs £1,023/mo outside)
               </label>
             </div>
@@ -292,10 +292,10 @@ export const CostCalculatorModal: React.FC<CostCalculatorModalProps> = ({
           {/* Tuition input */}
           <div>
             <div className="flex justify-between items-center mb-1.5">
-              <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
+              <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
                 Annual Tuition ({b.currencyCode})
               </label>
-              <span className="text-xs text-blue-600 font-bold">
+              <span className="text-xs text-blue-400 font-bold">
                 {tuitionPerYear === 0 ? '€0 (Public Univ)' : `${b.currencyCode} ${tuitionPerYear.toLocaleString()}`}
               </span>
             </div>
@@ -303,7 +303,7 @@ export const CostCalculatorModal: React.FC<CostCalculatorModalProps> = ({
               type="number"
               value={tuitionPerYear}
               onChange={e => setTuitionPerYear(Math.max(0, Number(e.target.value)))}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-700 text-sm focus:outline-none focus:border-blue-500 bg-slate-800 text-white placeholder-slate-500 transition-colors"
               placeholder="0"
             />
             {country === 'germany' && (
@@ -391,10 +391,10 @@ export const CostCalculatorModal: React.FC<CostCalculatorModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setLoanType('unsecured')}
-                    className={`p-2 rounded-xl border text-center font-semibold text-xs ${
+                    className={`p-2 rounded-xl border text-center font-semibold text-xs transition-colors cursor-pointer ${
                       loanType === 'unsecured'
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-white text-slate-700 border-slate-200'
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                        : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-750'
                     }`}
                   >
                     Non-Collateral (Up to ₹50L)
@@ -402,10 +402,10 @@ export const CostCalculatorModal: React.FC<CostCalculatorModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setLoanType('secured')}
-                    className={`p-2 rounded-xl border text-center font-semibold text-xs ${
+                    className={`p-2 rounded-xl border text-center font-semibold text-xs transition-colors cursor-pointer ${
                       loanType === 'secured'
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-white text-slate-700 border-slate-200'
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                        : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-750'
                     }`}
                   >
                     Secured / Govt (Up to ₹1.5 Cr)
@@ -413,9 +413,9 @@ export const CostCalculatorModal: React.FC<CostCalculatorModalProps> = ({
                 </div>
 
                 <div>
-                  <div className="flex justify-between items-center text-[11px] font-semibold text-slate-600 mb-1">
+                  <div className="flex justify-between items-center text-[11px] font-semibold text-slate-300 mb-1">
                     <span>Loan Required: ₹{loanAmountLakhs} Lakhs</span>
-                    <span className="text-blue-700 font-bold">Estimated EMI: ₹{estimatedEmi.toLocaleString()}/mo</span>
+                    <span className="text-blue-400 font-bold">Estimated EMI: ₹{estimatedEmi.toLocaleString()}/mo</span>
                   </div>
                   <input
                     type="range"
@@ -424,7 +424,7 @@ export const CostCalculatorModal: React.FC<CostCalculatorModalProps> = ({
                     step="5"
                     value={loanAmountLakhs}
                     onChange={e => setLoanAmountLakhs(Number(e.target.value))}
-                    className="w-full accent-blue-600"
+                    className="w-full accent-blue-600 cursor-pointer"
                   />
                   <div className="flex justify-between text-[10px] text-slate-400">
                     <span>₹5L</span>
@@ -433,15 +433,15 @@ export const CostCalculatorModal: React.FC<CostCalculatorModalProps> = ({
                   </div>
                 </div>
 
-                <div className="p-3 bg-white rounded-xl border border-blue-100 flex items-center justify-between">
-                  <div className="text-[11px] text-slate-600">
-                    <span className="font-bold text-slate-800">Margam Loan Desk:</span> Direct tie-ups with SBI, HDFC Credila, Avanse (0 processing fees).
+                <div className="p-3 bg-slate-900/90 rounded-xl border border-slate-700/80 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2">
+                  <div className="text-[11px] text-slate-300">
+                    <span className="font-bold text-white">Margam Loan Desk:</span> Direct tie-ups with SBI, HDFC Credila, Avanse (0 processing fees).
                   </div>
                   <a
                     href={loanWhatsAppUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold whitespace-nowrap shadow-xs active:scale-95"
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold whitespace-nowrap shadow-xs active:scale-95 cursor-pointer shrink-0"
                   >
                     Talk to Loan Mentor
                   </a>
@@ -452,17 +452,17 @@ export const CostCalculatorModal: React.FC<CostCalculatorModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+        <div className="px-6 py-4 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-xs font-medium text-slate-600 hover:text-slate-800"
+            className="px-4 py-2 text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
           >
             Close
           </button>
           {onInsertToChat && (
             <button
               onClick={handleInsert}
-              className="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 shadow-sm transition-all flex items-center gap-1.5 active:scale-95"
+              className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />

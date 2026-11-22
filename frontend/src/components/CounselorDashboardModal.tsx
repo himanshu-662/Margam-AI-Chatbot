@@ -269,15 +269,15 @@ export const CounselorDashboardModal: React.FC<CounselorDashboardModalProps> = (
             
             {/* Leads Table */}
             <div className={`space-y-3 ${selectedLead ? 'lg:col-span-5' : 'lg:col-span-12'}`}>
-              <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-                <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+                <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between bg-slate-950/70">
+                  <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
                     Booked Inquiries ({filteredLeads.length})
                   </span>
                   <span className="text-xs text-slate-400">Click lead to open Dossier</span>
                 </div>
 
-                <div className="divide-y divide-slate-100 max-h-[500px] overflow-y-auto">
+                <div className="divide-y divide-slate-800 max-h-[500px] overflow-y-auto">
                   {filteredLeads.length === 0 ? (
                     <div className="py-12 text-center text-slate-400 text-sm">
                       No leads matching current filters.
@@ -289,20 +289,20 @@ export const CounselorDashboardModal: React.FC<CounselorDashboardModalProps> = (
                         <div
                           key={lead.booking_id}
                           onClick={() => viewDossier(lead)}
-                          className={`p-4 cursor-pointer transition-all hover:bg-indigo-50/50 ${
-                            isSelected ? 'bg-indigo-50/80 border-l-4 border-indigo-600' : ''
+                          className={`p-4 cursor-pointer transition-all hover:bg-slate-800/60 ${
+                            isSelected ? 'bg-slate-850 border-l-4 border-indigo-500' : ''
                           }`}
                         >
                           <div className="flex items-start justify-between gap-2 mb-1.5">
                             <div>
-                              <h3 className="font-semibold text-sm text-slate-900 flex items-center gap-2">
+                              <h3 className="font-semibold text-sm text-white flex items-center gap-2">
                                 {lead.name}
                                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                                   lead.lead_category === 'HOT'
-                                    ? 'bg-rose-100 text-rose-700 border border-rose-200'
+                                    ? 'bg-rose-950 text-rose-300 border border-rose-800'
                                     : lead.lead_category === 'WARM'
-                                    ? 'bg-amber-100 text-amber-700 border border-amber-200'
-                                    : 'bg-slate-100 text-slate-700'
+                                    ? 'bg-amber-950 text-amber-300 border border-amber-800'
+                                    : 'bg-slate-800 text-slate-300 border border-slate-700'
                                 }`}>
                                   {lead.lead_category} ({lead.lead_score}/100)
                                 </span>
@@ -314,7 +314,7 @@ export const CounselorDashboardModal: React.FC<CounselorDashboardModalProps> = (
                                 <span>{lead.phone}</span>
                               </p>
                             </div>
-                            <span className="text-[10px] font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded">
+                            <span className="text-[10px] font-mono text-slate-300 bg-slate-800 border border-slate-700 px-2 py-0.5 rounded">
                               {lead.booking_id}
                             </span>
                           </div>
@@ -403,7 +403,7 @@ export const CounselorDashboardModal: React.FC<CounselorDashboardModalProps> = (
                     <p className="text-xs">Loading Counselor Brief...</p>
                   </div>
                 ) : (
-                  <div className="prose prose-sm max-w-none text-xs sm:text-sm">
+                  <div className="prose prose-invert prose-sm max-w-none text-xs sm:text-sm text-slate-200">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
                       {dossierMarkdown}
                     </ReactMarkdown>
@@ -417,9 +417,9 @@ export const CounselorDashboardModal: React.FC<CounselorDashboardModalProps> = (
         </div>
 
         {/* Footer info */}
-        <div className="px-6 py-3.5 bg-slate-100 border-t border-slate-200 text-xs text-slate-500 flex items-center justify-between">
+        <div className="px-6 py-3.5 bg-slate-950/80 border-t border-slate-800 text-xs text-slate-400 flex items-center justify-between">
           <span>Margam Educational Services &copy; 2026. Founder & Lead Counselor: Jeevithram.</span>
-          <span className="font-medium text-indigo-600">Zero-Consultancy Free Model</span>
+          <span className="font-medium text-indigo-400">Zero-Consultancy Free Model</span>
         </div>
 
       </div>

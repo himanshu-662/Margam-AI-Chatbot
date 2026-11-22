@@ -128,11 +128,11 @@ export const DocumentReviewModal: React.FC<DocumentReviewModalProps> = ({
           {/* Controls */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-[11px] font-semibold text-slate-600 uppercase mb-1">Document Type</label>
+              <label className="block text-[11px] font-semibold text-slate-300 uppercase mb-1">Document Type</label>
               <select
                 value={docType}
                 onChange={e => setDocType(e.target.value as any)}
-                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500"
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-700 bg-slate-800 text-slate-200 focus:outline-none focus:border-blue-500 transition-colors"
               >
                 <option value="sop">Statement of Purpose (SOP)</option>
                 <option value="resume">Academic CV / Resume</option>
@@ -140,11 +140,11 @@ export const DocumentReviewModal: React.FC<DocumentReviewModalProps> = ({
               </select>
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-slate-600 uppercase mb-1">Target Country</label>
+              <label className="block text-[11px] font-semibold text-slate-300 uppercase mb-1">Target Country</label>
               <select
                 value={selectedCountry}
                 onChange={e => setSelectedCountry(e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500"
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-700 bg-slate-800 text-slate-200 focus:outline-none focus:border-blue-500 transition-colors"
               >
                 <option value="Germany">Germany (€0 Tuition)</option>
                 <option value="United Kingdom">United Kingdom</option>
@@ -156,11 +156,11 @@ export const DocumentReviewModal: React.FC<DocumentReviewModalProps> = ({
               </select>
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-slate-600 uppercase mb-1">Target Degree</label>
+              <label className="block text-[11px] font-semibold text-slate-300 uppercase mb-1">Target Degree</label>
               <select
                 value={targetDegree}
                 onChange={e => setTargetDegree(e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500"
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-700 bg-slate-800 text-slate-200 focus:outline-none focus:border-blue-500 transition-colors"
               >
                 <option value="Master's">Master's (MS/MSc)</option>
                 <option value="Bachelor's">Bachelor's</option>
@@ -173,7 +173,7 @@ export const DocumentReviewModal: React.FC<DocumentReviewModalProps> = ({
           {/* Upload Area */}
           <div
             onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed border-slate-200 hover:border-blue-400 bg-slate-50/60 hover:bg-blue-50/30 p-6 rounded-2xl cursor-pointer transition-all text-center flex flex-col items-center justify-center gap-2 group"
+            className="border-2 border-dashed border-slate-700 hover:border-blue-500 bg-slate-850/60 hover:bg-blue-950/20 p-6 rounded-2xl cursor-pointer transition-all text-center flex flex-col items-center justify-center gap-2 group"
           >
             <input
               type="file"
@@ -182,14 +182,14 @@ export const DocumentReviewModal: React.FC<DocumentReviewModalProps> = ({
               accept=".pdf,.docx,.txt"
               className="hidden"
             />
-            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <div className="w-10 h-10 rounded-full bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center group-hover:scale-110 transition-transform">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
               </svg>
             </div>
             {file ? (
               <div>
-                <p className="text-sm font-semibold text-slate-800">{file.name}</p>
+                <p className="text-sm font-semibold text-white">{file.name}</p>
                 <p className="text-xs text-slate-400">{(file.size / 1024).toFixed(1)} KB · Click to change file</p>
               </div>
             ) : (
@@ -242,7 +242,7 @@ export const DocumentReviewModal: React.FC<DocumentReviewModalProps> = ({
               </div>
 
               {/* Summary */}
-              <p className="text-xs leading-relaxed text-slate-700 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+              <p className="text-xs leading-relaxed text-slate-200 bg-slate-950/70 p-3.5 rounded-xl border border-slate-800">
                 {result.summary}
               </p>
 
@@ -314,17 +314,17 @@ export const DocumentReviewModal: React.FC<DocumentReviewModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+        <div className="px-6 py-4 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-xs font-medium text-slate-600 hover:text-slate-800"
+            className="px-4 py-2 text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
           >
             Close
           </button>
           {result && (
             <button
               onClick={handleInsert}
-              className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 shadow-sm transition-all flex items-center gap-1.5 active:scale-95"
+              className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
