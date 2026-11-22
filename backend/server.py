@@ -516,11 +516,7 @@ Answer {user_name}'s message in a clear, comprehensive, and engaging manner.
                 async for chunk in chain.astream({"user_name": user_name, "question": request.question}):
                     token_text = chunk if isinstance(chunk, str) else str(chunk)
                     if token_text:
-                        parts = re.split(r'(\s+)', token_text)
-                        for part in parts:
-                            if part:
-                                yield f"event: token\ndata: {json.dumps({'token': part})}\n\n"
-                                await asyncio.sleep(0.018)
+                        yield f"event: token\ndata: {json.dumps({'token': token_text})}\n\n"
                 
                 yield f"event: metadata\ndata: {json.dumps({'suggestions': ['Study in Germany with €0 tuition', 'UK Student Visa Checklist', 'Blocked Account (€11,904) step-by-step', 'Living expenses in Ireland'], 'citations': [], 'sources': []})}\n\n"
                 yield f"event: done\ndata: {json.dumps({'status': 'completed'})}\n\n"

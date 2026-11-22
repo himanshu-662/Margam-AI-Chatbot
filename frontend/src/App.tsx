@@ -54,6 +54,20 @@ const App: React.FC = () => {
     }
     return false;
   });
+
+  // Ensure sidebar stays closed on small mobile viewports
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setIsSidebarOpen(false);
+      }
+    };
+    if (window.innerWidth < 768) {
+      setIsSidebarOpen(false);
+    }
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isCostCalcOpen, setIsCostCalcOpen] = useState(false);
   const [isDocReviewOpen, setIsDocReviewOpen] = useState(false);
@@ -495,56 +509,13 @@ const App: React.FC = () => {
       const decoder = new TextDecoder();
       if (!reader) throw new Error('No readable stream available');
 
-      let targetText = '';
-      let displayedText = '';
-      let isStreamEnded = false;
+      let accumulatedText = '';
       let buffer = '';
       let citationsList: CitationItem[] = [];
       let sourcesList: string[] = [];
       let suggestionsList: string[] = [];
       let isEscalation = false;
       let ctaType = '';
-
-      if (streamingIntervalRef.current) {
-        clearInterval(streamingIntervalRef.current);
-      }
-
-      // Smooth 250ms typewriter reveal loop
-      streamingIntervalRef.current = setInterval(() => {
-        if (displayedText.length < targetText.length) {
-          const lag = targetText.length - displayedText.length;
-          // Measured 200ms cadence: reveals ~1 word / natural phrase per 200ms beat
-          const step = lag > 200 ? 25 : lag > 100 ? 15 : lag > 40 ? 8 : 4;
-          displayedText = targetText.slice(0, displayedText.length + step);
-
-          setMessages(prev =>
-            prev.map(m =>
-              m.id === botMsgId ? { ...m, content: displayedText, isStreaming: true } : m
-            )
-          );
-        } else if (isStreamEnded) {
-          clearInterval(streamingIntervalRef.current);
-          streamingIntervalRef.current = null;
-          setMessages(prev =>
-            prev.map(m =>
-              m.id === botMsgId
-                ? {
-                    ...m,
-                    content: targetText,
-                    citations: citationsList,
-                    sources: sourcesList,
-                    suggestions: suggestionsList,
-                    is_escalation: isEscalation,
-                    cta_type: ctaType,
-                    isStreaming: false
-                  }
-                : m
-            )
-          );
-          setIsTyping(false);
-          setStatusMessage('');
-        }
-      }, 250);
 
       while (true) {
         const { value, done } = await reader.read();
@@ -564,7 +535,14 @@ const App: React.FC = () => {
               const parsed = JSON.parse(rawData);
 
               if (currentEvent === 'token' && parsed.token) {
-                targetText += parsed.token;
+                accumulatedText += parsed.token;
+                setMessages(prev =>
+                  prev.map(m =>
+                    m.id === botMsgId
+                      ? { ...m, content: accumulatedText, isStreaming: true }
+                      : m
+                  )
+                );
               } else if (currentEvent === 'status' && parsed.message) {
                 setStatusMessage(parsed.message);
               } else if (currentEvent === 'metadata') {
@@ -585,13 +563,27 @@ const App: React.FC = () => {
         }
       }
 
-      isStreamEnded = true;
+      // Stream completed: finalize message with metadata and stop streaming state
+      setMessages(prev =>
+        prev.map(m =>
+          m.id === botMsgId
+            ? {
+                ...m,
+                content: accumulatedText,
+                citations: citationsList,
+                sources: sourcesList,
+                suggestions: suggestionsList,
+                is_escalation: isEscalation,
+                cta_type: ctaType,
+                isStreaming: false
+              }
+            : m
+        )
+      );
+      setIsTyping(false);
+      setStatusMessage('');
     } catch (streamError) {
       console.warn('Falling back to standard /chat endpoint...', streamError);
-      if (streamingIntervalRef.current) {
-        clearInterval(streamingIntervalRef.current);
-        streamingIntervalRef.current = null;
-      }
       try {
         const fallbackRes = await fetch(`${API_URL}/chat`, {
           method: 'POST',
@@ -615,52 +607,28 @@ const App: React.FC = () => {
         const data = await fallbackRes.json();
 
         const fullResponse = data.response || '';
-        let fallbackDisplayed = '';
-        streamingIntervalRef.current = setInterval(() => {
-          if (fallbackDisplayed.length < fullResponse.length) {
-            const lag = fullResponse.length - fallbackDisplayed.length;
-            const step = lag > 200 ? 25 : lag > 100 ? 15 : lag > 40 ? 8 : 4;
-            fallbackDisplayed = fullResponse.slice(0, fallbackDisplayed.length + step);
-            setMessages(prev =>
-              prev.map(m =>
-                m.id === botMsgId
-                  ? { ...m, content: fallbackDisplayed, isStreaming: true }
-                  : m
-              )
-            );
-          } else {
-            clearInterval(streamingIntervalRef.current);
-            streamingIntervalRef.current = null;
-            setMessages(prev =>
-              prev.map(m =>
-                m.id === botMsgId
-                  ? {
-                      ...m,
-                      content: fullResponse,
-                      sources: data.sources || [],
-                      citations: data.citations || [],
-                      suggestions: data.suggestions || [],
-                      is_escalation: data.is_escalation,
-                      cta_type: data.cta_type,
-                      isStreaming: false
-                    }
-                  : m
-              )
-            );
-            setIsTyping(false);
-            setStatusMessage('');
-          }
-        }, 250);
+        setMessages(prev =>
+          prev.map(m =>
+            m.id === botMsgId
+              ? {
+                  ...m,
+                  content: fullResponse,
+                  sources: data.sources || [],
+                  citations: data.citations || [],
+                  suggestions: data.suggestions || [],
+                  is_escalation: data.is_escalation,
+                  cta_type: data.cta_type,
+                  isStreaming: false
+                }
+              : m
+          )
+        );
 
         if (data.user_profile) {
           setStudentProfile(prev => ({ ...prev, ...data.user_profile }));
         }
       } catch (err: any) {
         console.error('Chat error:', err);
-        if (streamingIntervalRef.current) {
-          clearInterval(streamingIntervalRef.current);
-          streamingIntervalRef.current = null;
-        }
         const errorDetail = err?.message ? ` (${err.message})` : '';
         setMessages(prev =>
           prev.map(m =>
@@ -673,14 +641,13 @@ const App: React.FC = () => {
               : m
           )
         );
+      } finally {
         setIsTyping(false);
         setStatusMessage('');
       }
     } finally {
-      if (!streamingIntervalRef.current) {
-        setIsTyping(false);
-        setStatusMessage('');
-      }
+      setIsTyping(false);
+      setStatusMessage('');
     }
   };
 
@@ -754,7 +721,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen w-full bg-[#090E17] text-[#F1F5F9] overflow-hidden">
+    <div className="flex h-[100dvh] w-full bg-[#090E17] text-[#F1F5F9] overflow-hidden">
       {/* Sticky Desktop & Mobile AI Sidebar */}
       <ChatSidebar
         isOpen={isSidebarOpen}
@@ -770,7 +737,7 @@ const App: React.FC = () => {
       />
 
       {/* Main Studio Area */}
-      <div className="flex-1 flex flex-col h-screen min-w-0 overflow-hidden relative">
+      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative">
         <StudentProfileDrawer
           isOpen={isProfileOpen}
           onClose={() => setIsProfileOpen(false)}
@@ -873,12 +840,12 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* Top Executive Navigation Bar */}
-        <header className="w-full h-16 flex items-center justify-between px-3 sm:px-6 z-40 bg-[#090E17]/90 backdrop-blur-md border-b border-slate-800/80 shrink-0 relative">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+        {/* Top Executive Navigation Bar - Sticky, Always Visible on Mobile & Desktop */}
+        <header className="sticky top-0 left-0 right-0 z-40 w-full h-14 sm:h-16 flex items-center justify-between px-2.5 sm:px-6 bg-[#090E17] border-b border-slate-800/80 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-3 min-w-0 shrink">
             <button
               onClick={() => setIsSidebarOpen(prev => !prev)}
-              className="p-2 text-slate-300 hover:text-white hover:bg-slate-800/80 rounded-xl transition-all cursor-pointer shrink-0"
+              className="p-1.5 sm:p-2 text-slate-300 hover:text-white hover:bg-slate-800/80 rounded-xl transition-all cursor-pointer shrink-0"
               title={isSidebarOpen ? "Collapse sidebar" : "Open sidebar"}
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -886,11 +853,11 @@ const App: React.FC = () => {
               </svg>
             </button>
             
-            {/* Show logo: Always on mobile so branding stays intact, or when desktop sidebar is closed */}
+            {/* Show logo: Always visible on mobile, responsive width */}
             <img
               src="/images/Margam-text-logo.png"
               alt="Margam AI"
-              className={`h-7 sm:h-8 object-contain cursor-pointer hover:opacity-90 transition-opacity ${isSidebarOpen ? 'flex md:hidden' : 'flex'}`}
+              className={`h-6 sm:h-8 max-w-[105px] xs:max-w-[125px] sm:max-w-[150px] object-contain cursor-pointer hover:opacity-90 transition-opacity ${isSidebarOpen ? 'flex md:hidden' : 'flex'}`}
               onClick={handleNewSession}
             />
 
